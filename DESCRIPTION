@@ -1,0 +1,8 @@
+Package: BatchStARS
+Title: Stability Approach to Regularization Selection for lasso problems, in batch computing environments.
+Version: 0.1
+Authors.R: person("Zachary", "Kurtz", role = c("aut", "cre"), email="zachary.kurtz@med.nyu.edu")
+Description: An implementation of the Stability Approach to Regularization Selection (StARS, H. Liu - 2010) particulaly intended for L1-regularized graphical models (glasso or Meinshausen-Buhlmann neighborhood selection). Using the BatchJobs Map/Reduce strategy (for batch computing systems like PBS/Torque, LSF, SLURM or SGE) can significantly reduce the computation and memory burdens for StARS, even compared to existing multicore/parallelized implementations (i.e. since there is no longer a need to hold all subsampled graphical model structures in a single list). Additionally, this package contains functions for conducting a binary search along the regularization path to minimize the number of necessary jobs (though this could decrease the amount of parallelization achieved).
+Depends: R (>= 3.1.0), BatchJobs
+License: GPL (>= 2)
+Suggests: huge
