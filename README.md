@@ -25,5 +25,5 @@ sel <- batch.stars(L$data, fun=huge::huge, fargs=list(method='mb', lambda=lams),
 Estimating a sparse graphical models is slower for values of lambda. Therefore, we should use a binary search to minimize the number of lambdas values we need to try. This may save time for problems where the true lambda value is uncertain (especially for datasets with many variables) although it reintroduces serial computation along the lambda path (On order log(n) in theory).
 ```r
 lams <- exp(seq(log(.9), log(.05), length.out=20))
-sel <- bin.lam.search(L$data, lams, fun=huge::huge, fargs=list(method='mb'), rep.num=20, job.res=list(mem="1gb", walltime="2:00:00", nodes="1"), regdir="batchtest-files", regid="batchtest")
+sel <- bin.lam.search(L$data, lams, fun=huge::huge, fargs=list(method='mb'), rep.num=20, regdir="batchtest-files", regid="batchtest")
 ```
