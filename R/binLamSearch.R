@@ -14,15 +14,18 @@ bin.lam.search <- function(data, lambda, fun=huge::huge, fargs=list(), sel.fun=b
     while (i <= j) {
         rid <- paste("binsearch", nit, sep="")
         esttmp <- batch.stars(data, fun, fargs=c(fargs, list(lambda=lambda[i:j])), 
-                           regid=rid, regdir=paste(regdir, regid, rid, sep="/"), ...)
+                           regid=rid, regdir=paste(regdir, regid, rid, sep="/"), stars.thresh=stars.thresh,
+                            ...)
         est <- .combine.stars(est, esttmp)
         # recalculate opt index
         est$opt.index <- max(which.max(est$variability >= stars.thresh)[1] - 1, 1)
         if (est$opt.index > 1) return(est)
         else {
             i <- j+1
-            j <- round((j+m)/2)
+            j <- round((j+m-1)/2)
         }
+        print(i)
+        print(j)
     nit <- nit+1
     }
     if (est$opt.index == 1) warning("Optimal lambda not found")
