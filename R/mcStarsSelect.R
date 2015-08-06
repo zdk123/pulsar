@@ -1,7 +1,7 @@
 # run stars selection serially for testing purposes
 stars <- function(data, fun=huge::huge, fargs=list(),
                             stars.thresh = 0.05, stars.subsample.ratio = NULL, 
-                            rep.num = 20, verbose = TRUE, ncores = 1)  {
+                            rep.num = 20, ncores = 1)  {
     gcinfo(FALSE)
     n <- nrow(data)
     p <- ncol(data)
@@ -27,10 +27,10 @@ stars <- function(data, fun=huge::huge, fargs=list(),
     }
 
     premerge <- parallel::mclapply(ind.sample, estFun, mc.cores=ncores)
+    est <- list()
     est$merge <- Reduce(function(l1, l2) lapply(1:length(l1), 
                     function(i) l1[[i]] + l2[[i]]), premerge, accumulate=FALSE)
-    est$merge <- reduceResults(reg, fun=function(job, res, aggr) 
-                    lapply(1:length(aggr), function(i) aggr[[i]]+res[[i]])) 
+
     gc() # flush
 
     est$variability <- rep(0, length(est$merge))
@@ -45,5 +45,5 @@ stars <- function(data, fun=huge::huge, fargs=list(),
 #    est$opt.sparsity <- est$sparsity[est$opt.index]
     est$criterion <- "stars"
     class(est)    <- "batch.select"
-    return(c(est, list(id=id, reg=reg)))
+    return(est)
 }
