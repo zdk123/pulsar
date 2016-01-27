@@ -10,7 +10,6 @@ stars <- function(data, fun=huge::huge, fargs=list(),
         stop(paste('Error: missing members in fargs:', 
              paste(c('lambda')[c(is.null(fargs$lambda))])))
     }
-    
     if (is.null(stars.subsample.ratio)) {
         if (n > 144)
             stars.subsample.ratio = 10 * sqrt(n)/n
@@ -37,7 +36,7 @@ stars <- function(data, fun=huge::huge, fargs=list(),
     for (i in 1:length(est$merge)) {
         est$merge[[i]] <- est$merge[[i]]/rep.num
         # TODO: add normalization constants for non glasso problems
-        est$variability[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]]))/(p * (p - 1))
+        est$variability[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) /(p * (p - 1))
     }
     est$opt.index    <- max(which.max(est$variability >= stars.thresh)[1] - 1, 1)
 #    est$refit        <- est$path[[est$opt.index]]

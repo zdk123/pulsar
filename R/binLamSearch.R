@@ -1,5 +1,5 @@
 bin.lam.search <- function(data, lambda, fun=huge::huge, fargs=list(), sel.fun=batch.stars, 
-                            stars.thresh = 0.05, regid="batchtest", regdir=".", rep0=10, offset0=1,...) {
+                            stars.thresh = 0.05, regid="batchtest", regdir="./batchtest", rep0=10, offset0=1,...) {
 
     fargs$lambda <- NULL
     lambda <- sort(lambda, decreasing=TRUE)
