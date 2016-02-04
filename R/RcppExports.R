@@ -2,18 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 GraphDiss <- function(M) {
-    .Call('BatchStARS_GraphDiss', PACKAGE = 'BatchStARS', M)
+    .Call('pulsar_GraphDiss', PACKAGE = 'pulsar', M)
 }
 
 rowVars <- function(m) {
-    .Call('BatchStARS_rowVars', PACKAGE = 'BatchStARS', m)
+    .Call('pulsar_rowVars', PACKAGE = 'pulsar', m)
 }
 
 colVars <- function(m) {
-    .Call('BatchStARS_colVars', PACKAGE = 'BatchStARS', m)
+    .Call('pulsar_colVars', PACKAGE = 'pulsar', m)
 }
 
 matPow <- function(M, n) {
-    .Call('BatchStARS_matPow', PACKAGE = 'BatchStARS', M, n)
+    .Call('pulsar_matPow', PACKAGE = 'pulsar', M, n)
 }
 

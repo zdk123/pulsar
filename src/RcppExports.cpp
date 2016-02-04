@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // GraphDiss
 arma::mat GraphDiss(SEXP M);
-RcppExport SEXP BatchStARS_GraphDiss(SEXP MSEXP) {
+RcppExport SEXP pulsar_GraphDiss(SEXP MSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -19,7 +19,7 @@ END_RCPP
 }
 // rowVars
 arma::vec rowVars(arma::mat m);
-RcppExport SEXP BatchStARS_rowVars(SEXP mSEXP) {
+RcppExport SEXP pulsar_rowVars(SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -30,7 +30,7 @@ END_RCPP
 }
 // colVars
 arma::vec colVars(arma::mat m);
-RcppExport SEXP BatchStARS_colVars(SEXP mSEXP) {
+RcppExport SEXP pulsar_colVars(SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -41,7 +41,7 @@ END_RCPP
 }
 // matPow
 arma::mat matPow(SEXP M, int n);
-RcppExport SEXP BatchStARS_matPow(SEXP MSEXP, SEXP nSEXP) {
+RcppExport SEXP pulsar_matPow(SEXP MSEXP, SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
