@@ -5,8 +5,8 @@ Authors.R: person("Zachary", "Kurtz", role = c("aut", "cre"), email="zachary.kur
 Description: An implementation of the Stability Approach to Regularization Selection (StARS, H. Liu - 2010), with options for speedups, paraellizations and alternative stability metrics. This package is particulaly intended for L1-regularized graphical models (glasso or Meinshausen-Buhlmann neighborhood selection), using your favorite implementation (i.e. huge, QUIC, glmnet, etc) though the method is quite generic (via function passing) and could be used for Lasso-type problems as well. 
     In batch computing systems, we use the BatchJobs Map/Reduce strategy (for batch computing systems like Torque, LSF, SLURM or SGE) which can significantly reduce the computation and memory burdens for StARS, even compared to multicore/parallelized implementations. 
     Additionally, this package contains options for using a heuristic lower bound on lambda, that works well in practice when the dimensionality is high (above 20 variables or so). Thus, computational burden is reduced when many subsamples are required.
-Depends: R (>= 3.1.0), Matrix
+Depends: R (>= 3.2.0), Matrix
 License: GPL (>= 2)
 Suggests: huge, rARPACK, orca, BatchJobs
-Imports: Rcpp (>= 0.11.3)
+Imports: Rcpp (>= 0.11.3), RcppArmadillo (>= 0.6.500.4.0)
 LinkingTo: Rcpp, RcppArmadillo

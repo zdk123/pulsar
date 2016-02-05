@@ -20,7 +20,6 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 ## eigs -> precomputed eigendecomp
 
   if (is.null(eig)) {
-  
 #    arploaded <- tryCatch(library(rARPACK), error=function(e) FALSE)
 #    if (!arploaded) {
 #      warning('install rARPACK for fast, sparse eigen decomp, proceeding with eigen')
@@ -74,7 +73,7 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 
 # Partition into odd and even contributions of the subgraph centrality
   sinhl <- sinh(dl)
-  fbodd <- v2 %*% sinhl;
+  fbodd <- v2 %*% sinhl
 
   coshl <- cosh(dl)
   feven <- v2 %*% coshl
@@ -83,7 +82,7 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
   return(out)
 }
 
-.LSMA <- function(x) log10(sqrt(mean(abs(x)))+1e-3)
+.SMA <- function(x) (sqrt(mean(abs(x))))
 
 estrada.class <- function(Graph, evthresh=1e-3, oddthresh=1e-3) {
 
@@ -102,17 +101,21 @@ estrada.class <- function(Graph, evthresh=1e-3, oddthresh=1e-3) {
 
 
   ev1[abs(ev1) <= evthresh] <- evthresh
-  subgodd[subgodd <= oddthresh] <- oddthresh
-#  if ((sum(ev1==evthresh) > 3) | sum(subgodd == oddthresh) > 3) return(0)
+  subgodd[abs(subgodd) <= oddthresh] <- oddthresh
+  if ((sum(ev1==evthresh) > (1/3)*length(ev1)) | sum(subgodd == oddthresh) > (1/3)*length(subgodd)) return(0)
   delLogEv1 <- log10(sqrt(ev1^2 * sinh(eval) / subgodd))
 
   if (any(is.nan(delLogEv1))) print(subgodd)
 
   delSplit <- split(delLogEv1, sign(delLogEv1))
-  logDevs  <- lapply(delSplit, .LSMA)
-  if (length(logDevs) != 2) return(0)
-  if (logDevs$`1`  > -2.1) eclass <- c(3,4)    else eclass <- c(1,2)
-  if (logDevs$`-1` > -2.1) eclass <- eclass[2] else eclass <- eclass[1]
+  Devs  <- lapply(delSplit, .SMA)
+#  return(Devs)
+  if (is.null(Devs$`-1`))     Devs$`-1` <- 0
+  else if (is.null(Devs$`1`)) Devs$`1` <-  0
+  else return(0)
+#  if (length(Devs) != 2) return(0)
+  if (log10(Devs$`1`)  > -2.1) eclass <- c(3,4)    else eclass <- c(1,2)
+  if (log10(Devs$`-1`) > -2.1) eclass <- eclass[2] else eclass <- eclass[1]
   return(eclass)
 }
 
