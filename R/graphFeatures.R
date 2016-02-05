@@ -82,9 +82,9 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
   return(out)
 }
 
-.SMA <- function(x) (sqrt(mean(abs(x))))
+.SMA <- function(x) ((mean(abs(x)))) 
 
-estrada.class <- function(Graph, evthresh=1e-3, oddthresh=1e-3) {
+estrada.class <- function(Graph, evthresh=1e-3) {
 
   if (class(Graph) != "subgraph.centrality")
       Graph <- subgraph.centrality(Graph)
@@ -97,25 +97,19 @@ estrada.class <- function(Graph, evthresh=1e-3, oddthresh=1e-3) {
 #      eval <- Graph$evals[2]
 #  }
   subgodd <- Graph$odd
-##  keepind <- which(ev1 > evthresh & subgodd > oddthresh)
-
-
-  ev1[abs(ev1) <= evthresh] <- evthresh
-  subgodd[abs(subgodd) <= oddthresh] <- oddthresh
-  if ((sum(ev1==evthresh) > (1/3)*length(ev1)) | sum(subgodd == oddthresh) > (1/3)*length(subgodd)) return(0)
-  delLogEv1 <- log10(sqrt(ev1^2 * sinh(eval) / subgodd))
-
-  if (any(is.nan(delLogEv1))) print(subgodd)
-
+  Evratio <- pmax(ev1^2 * sinh(eval) / subgodd, evthresh)
+  Evratio[is.nan(Evratio)] <- 0
+  if (sum(Evratio==evthresh) > (2/3)*length(Evratio)) return(0)
+  delLogEv1 <- log10(sqrt(Evratio))
   delSplit <- split(delLogEv1, sign(delLogEv1))
   Devs  <- lapply(delSplit, .SMA)
-#  return(Devs)
-  if (is.null(Devs$`-1`))     Devs$`-1` <- 0
-  else if (is.null(Devs$`1`)) Devs$`1` <-  0
-  else return(0)
-#  if (length(Devs) != 2) return(0)
-  if (log10(Devs$`1`)  > -2.1) eclass <- c(3,4)    else eclass <- c(1,2)
-  if (log10(Devs$`-1`) > -2.1) eclass <- eclass[2] else eclass <- eclass[1]
+  if (is.null(Devs$`-1`) && is.null(Devs$`1`)) return(0)
+  if (is.null(Devs$`-1`))  Devs$`-1` <- 0
+  else if (is.null(Devs$`1`))   Devs$`1` <-  0
+
+  if (length(Devs) != 2) return(0) ## will we ever get here?
+  if (log10(Devs$`1`+ 1e-3)  > -2.1) eclass <- c(3,4)    else eclass <- c(1,2)
+  if (log10(Devs$`-1`+1e-3) > -2.1)  eclass <- eclass[2] else eclass <- eclass[1]
   return(eclass)
 }
 
