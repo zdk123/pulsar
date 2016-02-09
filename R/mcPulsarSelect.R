@@ -208,7 +208,7 @@ graphlet.stability <- function(premerge, thresh, rep.num, p, nlams) {
     est <- list()
 #    estrlist    <- lapply(premerge.reord, function(pm) lapply(pm, estrada))
 #    est$merge <- lapply(estrlist, function(estrvec) Reduce("+", estrvec)/rep.num)
-   est$summary <- lapply(premerge, function(x) (((sapply(x, graphletvec)))))
+   est$summary <- sapply(premerge, function(x) mean(dist(sapply(x, graphletvec))))
   return(est)
     if (!is.null(thresh))
       est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
