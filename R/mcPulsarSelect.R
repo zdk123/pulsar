@@ -106,7 +106,7 @@ stars.stability <- function(premerge, stars.thresh, rep.num, p) {
 }
 
 
-sufficiency <- function(merge, rep.num, p) {
+sufficiency <- function(merge, rep.num, p, nlams) {
 ## Merge solution from StARS
   est <- list()
   est$merge <- sapply(merge, function(x) apply(x*(1-x), 2, max))
