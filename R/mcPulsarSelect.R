@@ -11,7 +11,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     }
     nlams <- length(fargs$lambda)
 
-    knowncrits <- c("stars", "diss", "estrada", "graphlet", "nc")
+    knowncrits <- c("stars", "diss", "estrada", "graphlet", "nc", "sufficiency")
     if (!all(criterion %in% knowncrits))
        stop(paste('Error: unknown criterion', paste(criterion[!(criterion %in% knowncrits)], collapse=", "), sep=": "))
 
@@ -59,12 +59,17 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
 #        est$estrada <- estrada.stability(premerge.reord, thresh, rep.num, p, nlams)
 
       else if (crit == "estrada") {
-        if (!("stars" %in% criterion)) warning('Need StaRS for computing Estrada classes... Estrada stability not run')
+        if (!("stars" %in% criterion)) warning('Need StaRS for computing Estrada classes... not run')
         else  est$estrada <- estrada.stability(est$stars$merge, thresh, rep.num, p, nlams)
       }
 
+      else if (crit == "sufficiency") {
+        if (!("stars" %in% criterion)) warning('Need StaRS for computing sufficiency... not run')
+        else  est$sufficiency <- sufficiency(est$stars$merge, rep.num, p, nlams)
+      }
+
       else if (crit == "graphlet")
-        est$graphlet <- graphletcor.stability(premerge.reord, thresh, rep.num, p, nlams)
+        est$graphlet <- graphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
 
       else if (crit == "nc")
         est$nc <- nc.stability(premerge.reord, thresh, rep.num, p, nlams)
@@ -77,7 +82,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
       est$stars$lb.opt.index <- lb.est$opt.index
     }
 
-    class(est) <- "stars.select"
+    class(est) <- "pulsar"
     return(est)
 }
 
@@ -98,6 +103,16 @@ stars.stability <- function(premerge, stars.thresh, rep.num, p) {
     est$criterion <- "stars.stability"
     est$thresh    <- stars.thresh
     return(est)
+}
+
+
+sufficiency <- function(merge, rep.num, p) {
+## Merge solution from StARS
+  est <- list()
+  est$merge <- sapply(merge, function(x) apply(x*(1-x), 2, max))
+  est$summary <- colMeans(est$merge)
+  est$criterion <- 'sufficiency'
+  return(est)
 }
 
 
@@ -188,13 +203,13 @@ nc.stability <- function(premerge, thresh, rep.num, p, nlams) {
 
 }
 
-graphletcor.stability <- function(premerge, thresh, rep.num, p, nlams) {
+graphlet.stability <- function(premerge, thresh, rep.num, p, nlams) {
 
     est <- list()
 #    estrlist    <- lapply(premerge.reord, function(pm) lapply(pm, estrada))
 #    est$merge <- lapply(estrlist, function(estrvec) Reduce("+", estrvec)/rep.num)
-   est$summary <- sapply(premerge, function(x) mean(dist(sapply(x, graphcorvec))))
-
+   est$summary <- lapply(premerge, function(x) (((sapply(x, graphletvec)))))
+  return(est)
     if (!is.null(thresh))
       est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
     else

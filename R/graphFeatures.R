@@ -39,18 +39,29 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   return(nc)
 }
 
+.tnorm <- function(x) {
+#   xs <- sum(x+1)
+#   (x+1)/xs
+  if (all(x==0)) x
+  else x/sum(x)
+}
 
-graphcorvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+graphletvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
   ## assume G1, G2 are sparse Matrix objects
   Elist  <-  orca:::convert.graph(Matrix::summary(G)[,-3])
-  n <- length(orbind)
-  if (ncol(Elist) == 0) return(rep(0, n*(n-1)/2))
+#  n <- length(orbind)
+  if (ncol(Elist) < 1) return(rep(0, 15*nrow(G)))
 
-  gcount <- .C("count4", Elist, dim(Elist), 
+  gcount <- .C("count4", Elist, dim(Elist),
       orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits
-
-  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-  gcor[upper.tri(gcor)]
+  if (max(Elist) < nrow(G)) {
+## if edges are missing from nodes at the end of the graph, add them back
+      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
+      gcount <- rbind(gcount, gextra)
+  }
+  return(c(apply(gcount, 1, .tnorm)))
+##  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+##  gcor[upper.tri(gcor)]
 }
 
 
@@ -131,6 +142,4 @@ largestCC <- function(G, ncc=1, tol=.Machine$double.eps) {
   vects <- Mnsvd$v[,keepncc,drop=FALSE]
   apply(abs(vects), 2, function(x) which(.nonzero(x)))
 }
-
-
 
