@@ -11,7 +11,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     }
     nlams <- length(fargs$lambda)
 
-    knowncrits <- c("stars", "diss", "estrada", "graphlet", "nc", "sufficiency")
+    knowncrits <- c("stars", "diss", "estrada", "vgraphlet", "egraphlet", "gcd", "nc", "sufficiency")
     if (!all(criterion %in% knowncrits))
        stop(paste('Error: unknown criterion', paste(criterion[!(criterion %in% knowncrits)], collapse=", "), sep=": "))
 
@@ -68,8 +68,14 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
         else  est$sufficiency <- sufficiency(est$stars$merge, rep.num, p, nlams)
       }
 
-      else if (crit == "graphlet")
-        est$graphlet <- graphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
+      else if (crit == "egraphlet")
+        est$egraphlet <- egraphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
+
+      else if (crit == "vgraphlet")
+        est$vgraphlet <- vgraphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
+
+      else if (crit == "gcd")
+        est$gcd <- gcd.stability(premerge.reord, thresh, rep.num, p, nlams)
 
       else if (crit == "nc")
         est$nc <- nc.stability(premerge.reord, thresh, rep.num, p, nlams)
@@ -122,7 +128,8 @@ diss.stability <- function(premerge, diss.thresh, rep.num, p, nlams) {
     est <- list()
     disslist  <- lapply(premerge, function(pm) lapply(pm, graph.diss))
     est$merge <- lapply(disslist, function(dissmat) Reduce("+", dissmat)/rep.num)
-    mergesq   <- lapply(disslist, function(dissmat) Reduce(.sumsq, dissmat)/rep.num)
+    mergesq   <- lapply(disslist, function(dissmat) 
+                        Reduce(.sumsq, dissmat[-1], init=dissmat[[1]]^2)/rep.num)
 
     gc() # flush
     est$summary <- rep(0, length(est$merge))
@@ -203,18 +210,76 @@ nc.stability <- function(premerge, thresh, rep.num, p, nlams) {
 
 }
 
-graphlet.stability <- function(premerge, thresh, rep.num, p, nlams) {
+egraphlet.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=12) {
 
     est <- list()
 #    estrlist    <- lapply(premerge.reord, function(pm) lapply(pm, estrada))
 #    est$merge <- lapply(estrlist, function(estrvec) Reduce("+", estrvec)/rep.num)
-   est$summary <- sapply(premerge, function(x) mean(dist(sapply(x, graphletvec))))
-  return(est)
-    if (!is.null(thresh))
-      est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
-    else
-      est$opt.index <- 0
+    collect <- lapply(premerge, function(pm) lapply(pm, egraphletlist))
+    collect.reord <- lapply(collect, function(colam) lapply(1:norbs, function(i) 
+                      lapply(1:rep.num, function(j) colam[[j]][[i]])))
+    rm(list=c('collect')) ; gc()
+    est$merge <- vector('list', nlams)
+    est$summary <- Matrix(0, length(est$merge), norbs)
+    for (i in 1:nlams) {
+      est$merge[[i]] <- vector('list', norbs)
+      for (j in 1:norbs) {
+        collam <- collect.reord[[i]][[j]]
+        EX2 <- Reduce(.sumsq, collam[-1], init=collam[[1]]^2)/rep.num
+        EX  <- Reduce('+', collam)/rep.num
+        est$merge[[i]][[j]] <- EX2 - EX^2
+        est$summary[i,j] <- 2 * sum(est$merge[[i]][[j]]) / (p * (p - 1))
+      }
+    }
+
+#    if (!is.null(thresh))
+#      est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
+#    else
+#      est$opt.index <- 0
+
+    est$criterion <- "egraphlet.stability"
+    return(est)
+}
+
+
+vgraphlet.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
+
+    est <- list()
+    collect <- lapply(premerge, function(pm) lapply(pm, vgraphletlist))
+#    rm(list=c('collect')) ; gc()
+    est$merge <- vector('list', nlams)
+    est$summary <- matrix(0, nlams, norbs)
+    for (i in 1:nlams) {
+#      est$merge[[i]] <- vector('list', norbs)
+#      for (j in 1:norbs) {
+#        collam <- collect.reord[[i]][[j]]
+        EX2 <- Reduce(.sumsq, collect[[i]][-1], init=collect[[i]][[1]]^2)/rep.num
+        EX  <- Reduce('+', collect[[i]])/rep.num
+        est$merge[[i]] <- EX2 - EX^2
+        est$summary[i,] <- 2*Matrix::colMeans(est$merge[[i]])
+#      }
+    }
+#    if (!is.null(thresh))
+#      est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
+#    else
+#      est$opt.index <- 0
 
     est$criterion <- "graphlet.stability"
     return(est)
 }
+
+
+gcd.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
+
+    est <- list()
+    est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcdvec))))
+
+    est$summary <- vector('numeric', nlams)
+    for (i in 1:nlams) {
+        est$summary[i] <- mean(est$merge[[i]])
+    }
+
+    est$criterion <- "graphlet.stability"
+    return(est)
+}
+

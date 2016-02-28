@@ -46,22 +46,63 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   else x/sum(x)
 }
 
-graphletvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+egraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
   ## assume G1, G2 are sparse Matrix objects
-  Elist  <-  orca:::convert.graph(Matrix::summary(G)[,-3])
+  Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
 #  n <- length(orbind)
-  if (ncol(Elist) < 1) return(rep(0, 15*nrow(G)))
+  if (ncol(Elist) < 1) return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
+#  library(orca)
+  gcount <- orca::ecount4(Elist)
+#  if (max(Elist) < nrow(G)) {
+### if edges are missing from nodes at the end of the graph, add them back
+#      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
+#      gcount <- rbind(gcount, gextra)
+#  }
+  ## expand to all possible edges
+  ind    <- (Elist[,2]-1)*nrow(G) + Elist[,1]
+  revind <- (Elist[,1]-1)*ncol(G) + Elist[,2]
+  grlist <- vector('list', ncol(gcount))
+  return(apply(gcount, 2, function(gvec) {
+    gmat <- Matrix(0, nrow=nrow(G), ncol=ncol(G))
+    gmat[ind]    <- gvec
+    gmat[revind] <- gvec
+    gmat
+  }))
+##  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+##  gcor[upper.tri(gcor)]
+}
 
+
+vgraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+  ## assume G1, G2 are sparse Matrix objects
+  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
+#  n <- length(orbind)
+  if (ncol(Elist) < 1) return(matrix(0, nrow(G), 15))
+#  library(orca)
   gcount <- .C("count4", Elist, dim(Elist),
-      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits
+      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
   if (max(Elist) < nrow(G)) {
 ## if edges are missing from nodes at the end of the graph, add them back
       gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
       gcount <- rbind(gcount, gextra)
   }
-  return(c(apply(gcount, 1, .tnorm)))
+  return(gcount)
+  ## expand to all possible edges
 ##  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
 ##  gcor[upper.tri(gcor)]
+}
+
+gcdvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+
+  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
+  n <- length(orbind)
+  if (ncol(Elist) < 1) return(rep(0, n*(n-1)/2))
+#  library(orca)
+  gcount <- .C("count4", Elist, dim(Elist),
+      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
+  ## expand to all possible edges
+  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+  gcor[upper.tri(gcor)]
 }
 
 

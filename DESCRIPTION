@@ -7,6 +7,6 @@ Description: An implementation of the Stability Approach to Regularization Selec
     Additionally, this package contains options for using a heuristic lower bound on lambda, that works well in practice when the dimensionality is high (above 20 variables or so). Thus, computational burden is reduced when many subsamples are required.
 Depends: R (>= 3.2.0), Matrix
 License: GPL (>= 2)
-Suggests: huge, rARPACK, orca, BatchJobs
+Suggests: huge, QUIC, rARPACK, orca, BatchJobs
 Imports: Rcpp (>= 0.11.3), RcppArmadillo (>= 0.6.500.4.0)
 LinkingTo: Rcpp, RcppArmadillo

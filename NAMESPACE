@@ -1,3 +1,4 @@
 exportPattern("^[^\\.]")
 useDynLib(pulsar)
 exportPattern("^[[:alpha:]]+")
+importFrom(orca, ecount4)
