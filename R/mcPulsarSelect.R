@@ -24,26 +24,34 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio), 
                     replace = FALSE), simplify=FALSE)
 
-    estFun <- function(ind.sample) {
+    estFun <- function(ind.sample, fargs) {
         tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
         if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member') 
         return(tmp$path)
     }
 
     if (lb.stars) {
-        if (!("stars" %in% criterion)) stop('Lower bound method only available for StARS')
+        if (!("stars" %in% criterion) || length(criterion)>1) stop('Lower bound method only available for StARS (and currently, only StARS)')
         minN <- 2 # Hard code for now
-        lb.premerge <- parallel::mclapply(ind.sample[1:minN], estFun, mc.cores=ncores)
-        lb.est <- stability(lb.premerge, thresh, minN, p)
+        lb.premerge  <- parallel::mclapply(ind.sample[1:minN], estFun, 
+                      fargs=fargs, mc.cores=ncores)
+        lb.premerge.reord <- lapply(1:nlams, function(i) lapply(1:minN, 
+                              function(j) lb.premerge[[j]][[i]]))
+        lb.est       <- stars.stability(lb.premerge.reord, thresh, minN, p)
         fargs$lambda <- fargs$lambda[1:lb.est$opt.index]
-        lb.premerge <- lapply(lb.premerge, function(ppm) ppm[1:lb.est$opt.index])
-        premerge <- c(lb.premerge, parallel::mclapply(ind.sample[-(1:minN)], estFun, mc.cores=ncores))
+        nlams <- length(fargs$lambda)
+        lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[1:lb.est$opt.index])
+        tmp <- parallel::mclapply(ind.sample[-(1:minN)], 
+                      estFun, fargs=fargs, mc.cores=ncores)
+        premerge <- c(lb.premerge, tmp)
 
     } else {
-        premerge <- parallel::mclapply(ind.sample, estFun, mc.cores=ncores)
+        premerge <- parallel::mclapply(ind.sample, estFun, fargs=fargs, mc.cores=ncores)
     }
 
-    premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, function(j) premerge[[j]][[i]]))
+
+    premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, 
+                              function(j) premerge[[j]][[i]]))
     rm(premerge) ; gc()
     est <- list()
     
@@ -273,7 +281,6 @@ gcd.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
 
     est <- list()
     est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcdvec))))
-
     est$summary <- vector('numeric', nlams)
     for (i in 1:nlams) {
         est$summary[i] <- mean(est$merge[[i]])
