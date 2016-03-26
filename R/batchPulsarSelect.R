@@ -26,7 +26,8 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * stars.subsample.ratio),
                     replace = FALSE), simplify=FALSE)
 
-    estFun <- function(ind.sample, fargs) {
+
+    estFun <- function(ind.sample, fargs, data, fun) {
         tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
         if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member') 
         return(tmp$path)
@@ -53,7 +54,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         loadConfig(conffile)
 
         reg <- makeRegistry(id=regid, file.dir=regdir)
-        id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs=fargs))
+   id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs=fargs, data=data, fun=fun))
         doneSub <- submitJobs(reg, resources=job.res)
         doneRun <- waitForJobs(reg, id)
                 
@@ -68,8 +69,6 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     est <- list()
     est$merge <- reduceResults(reg, fun=function(job, res, aggr) 
                     lapply(1:length(aggr), function(i) aggr[[i]]+res[[i]])) 
-
-    est <- list()
 
     est$summary <- rep(0, length(est$merge))
     for (i in 1:length(est$merge)) {
