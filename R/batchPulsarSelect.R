@@ -1,6 +1,6 @@
 ## /TODO: reimplement
 batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
-                            stars.thresh = 0.1, stars.subsample.ratio = NULL, 
+                            stars.thresh = 0.1, stars.subsample.ratio = NULL, lb.stars=FALSE,
                             rep.num = 20, verbose = TRUE, regid = "batchtest", regdir="./",
                             conffile = ".BatchJobs.R", job.res=list())  {
     gcinfo(FALSE)
