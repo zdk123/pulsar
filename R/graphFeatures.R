@@ -46,13 +46,17 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   else x/sum(x)
 }
 
-egraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+egraphletlist <- function(G, norm=TRUE) {
   ## assume G1, G2 are sparse Matrix objects
   Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
 #  n <- length(orbind)
   if (ncol(Elist) < 1) return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
 #  library(orca)
   gcount <- orca::ecount4(Elist)
+  if (norm) {
+    p <- nrow(G)
+    normv <- c(choose(p, 2), rep(choose(p, 3), 3), rep(choose(p, 4), 8))
+  }
 #  if (max(Elist) < nrow(G)) {
 ### if edges are missing from nodes at the end of the graph, add them back
 #      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
@@ -62,7 +66,9 @@ egraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
   ind    <- (Elist[,2]-1)*nrow(G) + Elist[,1]
   revind <- (Elist[,1]-1)*ncol(G) + Elist[,2]
   grlist <- vector('list', ncol(gcount))
-  return(apply(gcount, 2, function(gvec) {
+  return(lapply(1:12, function(i) {
+    gvec <- gcount[,i]
+    if (norm) gvec <- gvec/normv[i]
     gmat <- Matrix(0, nrow=nrow(G), ncol=ncol(G))
     gmat[ind]    <- gvec
     gmat[revind] <- gvec

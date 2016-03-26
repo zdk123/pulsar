@@ -271,7 +271,6 @@ vgraphlet.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
 #      est$opt.index    <- max(which.max(est$summary >= thresh)[1] - 1, 1)
 #    else
 #      est$opt.index <- 0
-
     est$criterion <- "graphlet.stability"
     return(est)
 }
