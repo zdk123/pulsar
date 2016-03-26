@@ -53,7 +53,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         loadConfig(conffile)
 
         reg <- makeRegistry(id=regid, file.dir=regdir)
-        id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs))
+        id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs=fargs))
         doneSub <- submitJobs(reg, resources=job.res)
         doneRun <- waitForJobs(reg, id)
                 
