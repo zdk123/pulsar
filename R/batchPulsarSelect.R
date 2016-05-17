@@ -124,7 +124,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
       est$stars$opt.index <- est$stars$opt.index + ub.index - 1
     }
 
-
+    class(est) <- "batch.pulsar"
     return(c(est, list(id=id, reg=reg)))
 }
 
