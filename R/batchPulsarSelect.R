@@ -1,7 +1,7 @@
 ## /TODO: reimplement
 batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
-                            stars.thresh = 0.1, stars.subsample.ratio = NULL, lb.stars=FALSE,
-                            rep.num = 20, verbose = TRUE, regid = "batchtest", regdir="./",
+                            thresh = 0.1, subsample.ratio = NULL, lb.stars=FALSE, ub.stars=FALSE,
+                            rep.num = 20, regid = "batchtest", regdir="./", init="subtwo",
                             conffile = ".BatchJobs.R", job.res=list())  {
     gcinfo(FALSE)
     n <- nrow(data)
@@ -13,17 +13,17 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     }
     nlams <- length(fargs$lambda)
 
-    knowncrits <- c("stars")
+    knowncrits <- c("stars", "gcd")
     if (!all(criterion %in% knowncrits))
        stop(paste('Error: unknown criterion', paste(criterion[!(criterion %in% knowncrits)], collapse=", "), sep=": "))
 
-    if (is.null(stars.subsample.ratio)) {
+    if (is.null(subsample.ratio)) {
         if (n > 144)
-            stars.subsample.ratio = 10 * sqrt(n)/n
+            subsample.ratio = 10 * sqrt(n)/n
         if (n <= 144)
-            stars.subsample.ratio = 0.8
+            subsample.ratio = 0.8
     }
-    ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * stars.subsample.ratio),
+    ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio),
                     replace = FALSE), simplify=FALSE)
 
 
@@ -34,53 +34,106 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     }
 
 
-    if (lb.stars) warning('lower bound rule not yet implemented for batch mode')
-         
-#        if (!("stars" %in% criterion) || length(criterion)>1) stop('Lower bound method only available for StARS (and currently, only StARS)')
-#        minN <- 2 # Hard code for now
-#        lb.premerge  <- parallel::mclapply(ind.sample[1:minN], estFun, 
-#                      fargs=fargs, mc.cores=ncores)
-#        lb.premerge.reord <- lapply(1:nlams, function(i) lapply(1:minN, 
-#                              function(j) lb.premerge[[j]][[i]]))
-#        lb.est       <- stars.stability(lb.premerge.reord, thresh, minN, p)
-#        fargs$lambda <- fargs$lambda[1:lb.est$opt.index]
-#        nlams <- length(fargs$lambda)
-#        lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[1:lb.est$opt.index])
-#        tmp <- parallel::mclapply(ind.sample[-(1:minN)], 
-#                      estFun, fargs=fargs, mc.cores=ncores)
-#        premerge <- c(lb.premerge, tmp)
+    if (lb.stars) {
+       if (!("stars" %in% criterion)) # || length(criterion)>1)
+       stop('Lower/Upper bound method must be used with StARS')
+       minN <- 2
+       regid  <- paste(regid, init, sep="_")
+       regdir <- paste(regdir, init, sep="_")
+    } else 
+        minN <- rep.num
 
-#    } else {
-        loadConfig(conffile)
+    isamp <- ind.sample[1:minN]
+    out <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res)
+    reg <- out$reg ; id  <- out$id
 
-        reg <- makeRegistry(id=regid, file.dir=regdir)
-   id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs=fargs, data=data, fun=fun))
-        doneSub <- submitJobs(reg, resources=job.res)
+
+    if (lb.stars) {
+        if (is.null(thresh)) {warning("no threshold provided, using th=0.1") ; thresh <- .1}
         doneRun <- waitForJobs(reg, id)
-                
-        # jobs w/ no errors
         if (!doneRun) {
-            warning('Error in batch jobs')
+            stop('Errors in batch jobs for computing initial stability')
         }
 
-#    }
+ 
+        lb.starsmerge <- reduceResults(reg, fun=function(job, res, aggr) 
+                         lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]]))
+        print(rep.num)
+        lb.est <- stars.stability(NULL, thresh, minN, p, lb.starsmerge)
 
+        if (ub.stars) {
+            # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
+            pmean <- unlist(lapply(lb.est$merge, function(x) 2*sum(Matrix::summary(x)[,3]) / (p*(p-1))))
+            ub.summary   <- cummax(4*pmean*(1-pmean))
+            ub.index <- max(which.max(ub.summary >= thresh)[1] - 2, 1)
+        } else ub.index <- 1
+
+        fargs$lambda <- fargs$lambda[ub.index:lb.est$opt.index]
+        nlams <- length(fargs$lambda)
+
+        regid  <- gsub(paste("_", init, sep=""), "", regid)
+        regdir <- gsub(paste("_", init, sep=""), "", regdir)
+        isamp <- ind.sample[-(1:minN)]
+        out <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res)
+        reg <- out$reg ; id  <- out$id
+    }
+
+    # jobs w/ no errors
+    doneRun <- waitForJobs(reg, id)
+    jdone   <- findDone(reg, id)
+    rep.num <- length(jdone)
+    if (!doneRun) {
+        warning('Not all batch jobs completed... proceeding anyway')
+    }
 
     est <- list()
-    est$merge <- reduceResults(reg, fun=function(job, res, aggr) 
-                    lapply(1:length(aggr), function(i) aggr[[i]]+res[[i]])) 
+    for (i in 1:length(criterion)) {
+      crit <- criterion[i]
+      if (crit == "stars") {
+         starsmerge <- reduceResults(reg, fun=function(job, res, aggr) 
+            lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]]))
+         est$stars <- stars.stability(NULL, thresh, rep.num, p, starsmerge)
+     }
+     
+     if (crit == "gcd") {
+        gcdpremerge <- reduceResultsList(reg, fun=function(job, res) lapply(res, gcdvec))
+        gcdmerge <- lapply(1:nlams, function(i) t(dist(sapply(1:rep.num, 
+                           function(j) gcdpremerge[[j]][[i]]))))
+        est$gcd <- gcd.stability(NULL, thresh, rep.num, p, nlams, gcdmerge)
+     }
 
-    est$summary <- rep(0, length(est$merge))
-    for (i in 1:length(est$merge)) {
-        est$merge[[i]] <- est$merge[[i]]/rep.num
-        # TODO: add normalization constants for non glasso problems
-        est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]]))/(p * (p - 1))
     }
-    est$opt.index    <- max(which.max(est$summary >= stars.thresh)[1] - 1, 1)
-#    est$refit        <- est$path[[est$opt.index]]
-#    est$opt.lambda   <- est$lambda[est$opt.index]
-#    est$opt.sparsity <- est$sparsity[est$opt.index]
-    est$criterion <- "stars"
-    class(est)    <- "batch.select"
+
+
+    if (lb.stars) {
+      find <- 1:length(lb.est$summary)
+      pind <- ub.index:lb.est$opt.index
+      p2ind <- setdiff(find, pind)
+      tmpsumm <- vector('numeric', length(lb.est$summary))
+      tmpsumm[p2ind] <- lb.est$summary[p2ind]
+      tmpsumm[pind]  <- est$stars$summary
+      est$stars$summary <- tmpsumm
+
+      tmpmerg <- vector('list', length(lb.est$summary))
+      tmpmerg[p2ind] <- lb.est$merge[p2ind]
+      tmpmerg[pind]  <- est$stars$merge
+      est$stars$merge <- tmpmerg
+
+      est$stars$lb.index <- lb.est$opt.index
+      est$stars$ub.index <- ub.index
+      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
+    }
+
+
     return(c(est, list(id=id, reg=reg)))
+}
+
+
+
+batchply <- function(data, estFun, fun, fargs, ind.sample, regid, regdir, conffile, job.res) {
+    loadConfig(conffile)
+    reg <- makeRegistry(id=regid, file.dir=regdir)
+    id  <- batchMap(reg, estFun, ind.sample, more.args = list(fargs=fargs, data=data, fun=fun))
+    doneSub <- submitJobs(reg, resources=job.res)
+    return(list(reg=reg, id=id))
 }

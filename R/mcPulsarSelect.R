@@ -1,6 +1,6 @@
 pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), 
                     thresh = NULL, subsample.ratio = NULL, 
-                    rep.num = 20, lb.stars=FALSE, ncores = 1, ...)  {
+                    rep.num = 20, lb.stars=FALSE, ub.stars=FALSE, ncores = 1, ...)  {
     gcinfo(FALSE)
     n <- nrow(data)
     p <- ncol(data)
@@ -31,24 +31,38 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     }
 
     if (lb.stars) {
-        if (!("stars" %in% criterion) || length(criterion)>1) stop('Lower bound method only available for StARS (and currently, only StARS)')
+        if (!("stars" %in% criterion)) # || length(criterion)>1)
+            stop('Lower/Upper bound method must be used with StARS')
         minN <- 2 # Hard code for now
-        lb.premerge  <- parallel::mclapply(ind.sample[1:minN], estFun, 
-                      fargs=fargs, mc.cores=ncores)
+    } else {
+        minN <- rep.num
+    }
+    isamp <- ind.sample[1:minN]
+    premerge <- parallel::mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+
+
+    if (lb.stars) {
+        if (is.null(thresh)) {warning("no threshold provided, using th=0.1") ; thresh <- .1}
+        lb.premerge  <- premerge
         lb.premerge.reord <- lapply(1:nlams, function(i) lapply(1:minN, 
                               function(j) lb.premerge[[j]][[i]]))
         lb.est       <- stars.stability(lb.premerge.reord, thresh, minN, p)
-        fargs$lambda <- fargs$lambda[1:lb.est$opt.index]
+
+        if (ub.stars) {
+            # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
+            pmean <- unlist(lapply(lb.est$merge, function(x) 2*sum(Matrix::summary(x)[,3]) / (p*(p-1))))
+            ub.summary   <- cummax(4*pmean*(1-pmean))
+            ub.index <- max(which.max(ub.summary >= thresh)[1] - 2, 1)
+        } else ub.index <- 1
+
+        fargs$lambda <- fargs$lambda[ub.index:lb.est$opt.index]
         nlams <- length(fargs$lambda)
-        lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[1:lb.est$opt.index])
-        tmp <- parallel::mclapply(ind.sample[-(1:minN)], 
+        lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[ub.index:lb.est$opt.index])
+
+        tmp   <- parallel::mclapply(ind.sample[-(1:minN)], 
                       estFun, fargs=fargs, mc.cores=ncores)
-        premerge <- c(lb.premerge, tmp)
-
-    } else {
-        premerge <- parallel::mclapply(ind.sample, estFun, fargs=fargs, mc.cores=ncores)
+        premerge     <- c(lb.premerge, tmp)
     }
-
 
     premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, 
                               function(j) premerge[[j]][[i]]))
@@ -91,9 +105,22 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     }
 
     if (lb.stars) {
-      est$stars$summary <- c(est$stars$summary, lb.est$summary[-(1:lb.est$opt.index)])
-      est$stars$merge   <- c(est$stars$merge, lb.est$merge[-(1:lb.est$opt.index)])
-      est$stars$lb.opt.index <- lb.est$opt.index
+      find <- 1:length(lb.est$summary)
+      pind <- ub.index:lb.est$opt.index
+      p2ind <- setdiff(find, pind)
+      tmpsumm <- vector('numeric', length(lb.est$summary))
+      tmpsumm[p2ind] <- lb.est$summary[p2ind]
+      tmpsumm[pind]  <- est$stars$summary
+      est$stars$summary <- tmpsumm
+
+      tmpmerg <- vector('list', length(lb.est$summary))
+      tmpmerg[p2ind] <- lb.est$merge[p2ind]
+      tmpmerg[pind]  <- est$stars$merge
+      est$stars$merge <- tmpmerg
+
+      est$stars$lb.index <- lb.est$opt.index
+      est$stars$ub.index <- ub.index
+      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
     }
 
     class(est) <- "pulsar"
@@ -101,12 +128,17 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
 }
 
 
-stars.stability <- function(premerge, stars.thresh, rep.num, p) {
+stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL) {
     if (is.null(stars.thresh)) stars.thresh <- 0.05
     est <- list()
-    est$merge <- lapply(premerge, function(x) Reduce("+", x))
-    gc() # flush
+
+    if (is.null(merge)) {
+        est$merge <- lapply(premerge, function(x) Reduce("+", x))
+        gc() # flush
+    } else est$merge <- merge
+
     est$summary <- rep(0, length(est$merge))
+
     for (i in 1:length(est$merge)) {
         est$merge[[i]] <- est$merge[[i]]/rep.num
         est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) / (p * (p - 1))
@@ -276,10 +308,14 @@ vgraphlet.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
 }
 
 
-gcd.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=15) {
-
+gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL) {
     est <- list()
-    est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcdvec))))
+    if (is.null(merge)) {
+        est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcdvec))))
+    } else {
+        est$merge <- merge
+    }
+
     est$summary <- vector('numeric', nlams)
     for (i in 1:nlams) {
         est$summary[i] <- mean(est$merge[[i]])
