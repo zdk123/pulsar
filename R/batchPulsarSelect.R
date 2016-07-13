@@ -49,6 +49,26 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #' @return reg Registry object. See \code{BatchJobs::makeRegistry}
 #' @return id Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
 #' @return call: the original function call
+#' @examples
+#' \dontrun{
+#' ## Generate the data with huge:
+#' library(huge)
+#' set.seed(10010)
+#' p <- 40 ; n <- 1200
+#' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+#' lams  <- getLamPath(.2, .01, len=40)
+#' 
+#' ## Run pulsar with huge
+#' hugeargs <- list(lambda=lams, verbose=FALSE)
+#' out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+#'                 rep.num=20, criterion='stars')
+#'
+#' ## Run pulsar in bounded stars mode and include gcd metric:
+#' out.b <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+#'                 rep.num=20, criterion=c('stars', 'gcd'),
+#'                 lb.stars=TRUE, ub.stars=TRUE)
+#' plot(out.b)
+#' }
 #' @inheritParams pulsar
 #' @importFrom Matrix mean triu
 #' @export
@@ -228,7 +248,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
             warning("Optimal lambda may not be included within the supplied path")
     }
     est$call  <- match.call()
-    est$envcl <- parent.frame()
+    est$envir <- parent.frame()
     return(structure(est, class = "batch.pulsar"))
 }
 

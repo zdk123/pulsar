@@ -21,4 +21,16 @@ numeric vector of lambdas
 \description{
 Generate a lambda path sequence in descending order, equally or log spaced.
 }
+\examples{
+## Generate the data with huge:
+library(huge)
+set.seed(10010)
+p <- 40 ; n <- 1200
+dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+
+## Theoretical lamda max is the maximum abs value of the empirical covariance matrix
+maxCov <- max(abs(Matrix::triu(cov(dat$data), k=1)))
+lams  <- getLamPath(maxCov, 5e-2*maxCov, len=40)
+
+}
 

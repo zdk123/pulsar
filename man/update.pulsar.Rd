@@ -20,6 +20,6 @@ update.batch.pulsar(object, ..., evaluate = TRUE)
 the same output as \code{pulsar} or \code{batch.pulsar}
 }
 \description{
-Update and re-fit a model, with new or altered arguments.. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
+Update and re-fit a model, with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
 }
 

@@ -22,4 +22,20 @@ an S3 \code{pulsar.refit} object with members:
 \description{
 Run the supplied graphical model function on the whole dataset and refit with the selected lambda(s)
 }
+\examples{
+
+## Generate the data with huge:
+library(huge)
+set.seed(10010)
+p <- 40 ; n <- 1200
+dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+lams  <- getLamPath(.2, .01, len=40)
+
+## Run pulsar with huge
+hugeargs <- list(lambda=lams, verbose=FALSE)
+out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+                rep.num=20, criterion='stars')
+
+fit  <- refit(out.p)
+}
 

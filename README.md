@@ -160,181 +160,19 @@ fit.q2 <- refit(out.q2)
 Compare model error by relative hamming distances between refit adjacency matrices and the true
 graph and visualize the results:
 
-```r
-plot(out.q2, scale=TRUE)
-```
-
-![plot of chunk unnamed-chunk-11](http://i.imgur.com/gf0wpCM.png)
-
-```r
-starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
-gcderr   <- sum(fit.q2$refit$gcd   != dat$theta)/p^2
-gcderr < starserr
-# [1] TRUE
-
-## install.packages('network')
-truenet  <- network::network(dat$theta)
-starsnet <- network::network(summary(fit.q2$refit$stars))
-gcdnet   <- network::network(summary(fit.q2$refit$gcd))
-par(mfrow=c(1,3))
-coords <- plot(truenet, usearrows=FALSE, main="TRUE")
-plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
-plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
-```
-
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/qoBLRhS.png)
-
-## Batch Mode
-
-For large graphs, we could reduce pulsar run time by running each subsampled dataset totally in
-parallel (i.e. each run as an indepedent job). This is a natural choice since we want to infer an
-independent graphical model for each subsampled dataset.
-
-Enter the BatchJobs. This package lets us invoke the queuing system in a high performance computing
-(hpc) environment so that we don't have to worry about any of the job-handling procedures in R.
-Pulsar has only been testing for Torque so far, but should work without too much effort for
- LSF, SLURM, SGE and probably others.
-
-We also potentially gain efficiency in memory usage. Even for memory efficient representations of
-sparse graphs, for a lambda path of size L and for number N subsamples we must hold `L*N` `p*p`-
-sized adjacency matrices in memory to compute the summary statistic. BatchJobs lets us use a
-MapReduce strategy, so that only one `p*p` graph and one `p*p` aggregation matrix needs to be held
-in memory at a time. For large p, it can be more efficient to read data off the disk.
-
-This also means we will need access to a writable directory to write intermediate files (where the
-BatchJobs registry is stored). These will be automatically generated R scripts, error and output
-files and sqlite files so that BatchJobs can keep track of everything (although a different database
-can be used). Please see that package's documentation for more information. By default, pulsar will
-create the registry directory under R's  (platform-dependent) tmp directory but this should be
-overridden if these need to be retained long term (`regdir` argument to `batch.pulsar`).
-
-For generating BatchJobs, we need a configuration file (supply a path string to `conffile` argument,
-a good choice is the working directory) and a template file (which is best put in the same directory
-as the config file). Example config and PBS template file for Torque can be found in the /extdata/
-subdirectory of this github. See the BatchJobs homepage for creating templates for other systems.
-
-For this README I suggest using BatchJobs's convenient serial or multicore test mode to get things
-up and running. Download the files in a browser or directly in an R session:
-
-
-```r
-url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
-url <- paste(url, ".BatchJobsSerialTest.R", sep="/") # Serial mode
-## url <- paste(url, ".BatchJobsMC.R", sep="/") # uncomment for multicore
-download.file(url, destfile=".BatchJobs.R")
-```
-
-Since BatchJobs is not imported by `pulsar`, it needs to be loaded.
-Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
-multiple times).
-
-
-```r
-library(BatchJobs)
-out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs,
-                rep.num=100, criterion='stars', seed=10010) 
-                #, cleanup=TRUE)
-```
-
-Check that we get the same result from batch mode pulsar:
-
-
-```r
-opt.index(out.q, 'stars') == opt.index(out.batch, 'stars')
-# [1] TRUE
-```
-
-It is also possible to run bounded-mode stars in batch, but the first 2 subsamples (2 jobs) will
-run to completetion before the final N-2 are run. This serializes the batch mode a bit, but
-can still be faster for fine grain lambda paths and for sparse graphs. It is also advisable to
-do this for the `gcd` criterion because, computing graphlet frequencies can be costly and this is
-only done for the graphs in the bounded lambda path (in serial/multicore or batch pulsar).
-
-To keep the initial N=2 jobs separate from the rest, the string provided to the `init` argument
-("subtwo" by default) is concatenated to the basename of `regdir`. The registry/id is returned
-but named `init.reg` and `init.id` from `batch.pulsar`.
 
 
 
-```r
-out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
-                     lb.stars=TRUE, ub.stars=TRUE)
-```
-
-Check that we get the same result from bounded/batch mode pulsar:
 
 
-```r
-opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
-# [1] TRUE
-```
-
-### A few notes on batch mode pulsar
-
-* In real applications, on an hpc, it is important to specify the `res.list` argument, which is a
-__named__ list of PBS resources that matches the template file. For example if using the 
-simpletorque.tml file provided in /extdata/, one would provide `res.list=list(walltime="4:00:00",
- nodes="1", memory="1gb")` to give the PBS script 4 hours and 1GB of memory and 1 node to the
- resource list for `qsub`.
-
-* Gains in efficiency and run time (especially when paired with lower/upper bound mode) will largely
-depend on your hpc setup. E.g - do you have sufficient priority in the queue to run your 100 jobs
-in perfect parallel? Because settings vary so widely, we cannot provide support for unexpected hpc
-problems or make specific recommendations about requesting the appropriate resource requirements
-for jobs.
-
-* One final note: we assume that a small number of jobs could fail at random. If jobs fail to
-complete a warning will be given, but `pulsar` will complete the run and summary statistics will be
-computed over only over the successful jobs (with normalization constants appropriately adjusted).
-It is up to the user to re-start `pulsar` if there is a sampling-dependent reason some subset of
-jobs fail: e.g. an outlier datapoint increases computation time or graph density and insufficient
-resources are allocated.
-
-## Additional criteria
-
-Pulsar includes several other criteria of interest, which can be run indepedently of StARS (these
-are not yet included for batch mode). For example, to replicate the augmented AGNES (A-AGNES) method
-of [Caballe et al 2016](http://arxiv.org/abs/1509.05326), use the node-wise dissimilarity metric 
-(diss) and the AGNES algorithm as implemented in the `cluster` package. A-AGNES selects a target
-lambda that mimimizes the variance of the estimated diss (computed by `pulsar`) + the [squared] bias
-of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that has the maximum
-agglomerative coefficient over the path.
 
 
-```r
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs,
-            rep.num=100, criterion='diss', seed=10010, ncores=2)
-fit <- refit(out.diss)
-## Compute the max agglomerative coefficient over the full path
-path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
-ac <- sapply(path.diss, acfun)
-ac.sel <- out.diss$diss$merge[[which.max(ac)]]
 
-## Estimate the diss bias
-dissbias <- sapply(out.diss$diss$merge,
-                   function(x) mean((x-ac.sel)^2)/2)
-varbias  <- out.diss$diss$summary + dissbias
 
-## Select the index and refit
-opt.index(out.diss, 'diss') <- which.min(varbias)
-fit.diss <-refit(out.diss)
-```
 
-Evalue the edge-wide model error:
 
-```r
-aagneserr <- sum(fit.diss$refit$diss != dat$theta)/p^2
-aagneserr < starserr
-# [1] TRUE
-aagneserr < gcderr
-# [1] FALSE
-```
 
-Other criteria that are currently implemented are [natural connectivity](http://iopscience.iop.org/0256-307X/27/7/078902)
-stability, Tandon & Ravikumar's [sufficiency criterion](http://jmlr.org/proceedings/papers/v32/tandon14.html)
-and variability of the [Estrada index](http://journals.aps.org/pre/abstract/10.1103/PhysRevE.75.016103).
-These are currently implemented without a default method for actually selecting an optimal lambda,
-but as demonstrated above, these can be _ex post_ with a `pulsar` object.
 
-Feel free to request your favorite selection criterion to include with this package.
+
+
+

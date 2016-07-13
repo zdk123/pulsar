@@ -18,14 +18,14 @@ print.pulsar.refit <- function(x, ...) {
 
 #' @export
 print.batch.pulsar <- function(x, ...) {
-    fin <- getArgs(x$call, x$envcl)
+    fin <- getArgs(getCall(x), getEnvir(x))
     cat("Mode: batch")
     .print.pulsar(x, fin)
 }
 
 #' @export
 print.pulsar <- function(x, ...) {
-    fin <- getArgs(x$call, x$envcl)
+    fin <- getArgs(getCall(x), getEnvir(x))
     mode <- ifelse(fin$ncores > 1, "parallel", "serial")
     cat("Mode:", mode)
     .print.pulsar(x, fin)
@@ -75,7 +75,7 @@ plot.batch.pulsar <- function(x, ...) {
 #' @importFrom graphics plot points legend
 #' @keywords internal
 .plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE) {
-    fin  <- getArgs(x$call, x$envcl)
+    fin  <- getArgs(getCall(x), getEnvir(x))
     lams <- fin$fargs$lambda
     xlab <- "lambda"
     if (invlam) {lams <- 1/lams ; xlab <- paste("1/", xlab, sep="")}
@@ -177,11 +177,11 @@ update.batch.pulsar <- function(object, ..., evaluate=TRUE) {
     .update.pulsar(object, extras, evaluate)
 }
 
-#' @importFrom stats update.default
+#' @importFrom stats update.default getCall
 #' @keywords internal
 .update.pulsar <- function(object, extras, evaluate) {
     call <- getCall(object)
-    if (is.null(object$envcl)) object$envcl <- parent.frame()
+    if (is.null(getEnvir(object))) object$envir <- parent.frame()
     if (length(extras)) {
         existing <- !is.na(match(names(extras), names(call)))
         for (a in names(extras)[existing]) call[[a]] <- extras[[a]]
@@ -191,6 +191,19 @@ update.batch.pulsar <- function(object, ..., evaluate=TRUE) {
             }
     }
     if (evaluate)
-        eval(call, object$envcl)
+        eval(call, getEnvir(object))
     else call
+}
+
+#' Get calling environment
+#'
+#' Generic function for extracting a environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+#' @export
+getEnvir <- function(x) {
+    UseMethod("getEnvir")
+}
+
+#' @export
+getEnvir.default <- function(x) {
+    getElement(x, "envir")
 }

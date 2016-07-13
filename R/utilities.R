@@ -63,7 +63,7 @@ opt.index <- function(obj, criterion='stars') {
 #' @rdname opt.index
 "opt.index<-" <- function(obj, criterion='stars', value) {
     .pcheck(obj)
-    fin <- getArgs(obj$call, obj$envcl)
+    fin <- getArgs(obj$call, obj$envir)
     .critcheck(obj, criterion)
     if (!is.numeric(value) || value < 1 || value >= length(fin$fargs$lambda))
         stop('Index value must be positive int within range length of lambda path')
@@ -80,6 +80,18 @@ opt.index <- function(obj, criterion='stars') {
 #' @param len numeric/int, length of lambda path
 #' @param log logical, should the lambda path be log-spaced
 #' @return numeric vector of lambdas
+#' @examples
+#' ## Generate the data with huge:
+#' library(huge)
+#' set.seed(10010)
+#' p <- 40 ; n <- 1200
+#' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+#'
+#' ## Theoretical lamda max is the maximum abs value of the empirical covariance matrix
+#' maxCov <- getMaxCov(dat$data)
+#' lams   <- getLamPath(maxCov, 5e-2*maxCov, len=40)
+
+#'
 #' @export
 getLamPath <- function(max, min, len, log=FALSE) {
     if (max < min) stop('Did you flip min and max?')
@@ -87,4 +99,17 @@ getLamPath <- function(max, min, len, log=FALSE) {
     lams  <- seq(max, min, length.out=len)
     if (log) exp(lams)
     else lams
+}
+
+#' Max absolute value of cov matrix
+#'
+#' Get the maximum absolute value of a covariance matrix.
+#' @param x A matrix/Matrix of data or covariance
+#' @param cov Flag if \code{x} is a covariance matrix, Set False is \code{x} is an nxp data matrix. By default, if \code{x} is symmetric, assume it is a covariance matrix.
+#' @param diag Flag to include diagonal entries in the max
+#' @export
+getMaxCov <- function(x, cov=isSymmetric(x), diag=FALSE) {
+    if (!cov) x <- cov(x)
+    k <- if (diag) 0 else 1
+    max(abs(Matrix::triu(x, k=k)))
 }

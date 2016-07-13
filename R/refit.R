@@ -10,6 +10,22 @@
 #'   \item refit: a named list of adjacency matrices, for each optimal criterion in \code{obj} or specified in the \code{criterion} argument
 #'   \item fun: the original function for estimating the graphical model
 #'}
+#' @examples
+#'
+#' ## Generate the data with huge:
+#' library(huge)
+#' set.seed(10010)
+#' p <- 40 ; n <- 1200
+#' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+#' lams  <- getLamPath(.2, .01, len=40)
+#' 
+#' ## Run pulsar with huge
+#' hugeargs <- list(lambda=lams, verbose=FALSE)
+#' out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+#'                 rep.num=20, criterion='stars')
+#'
+#' fit  <- refit(out.p)
+
 #' @export
 refit <- function(obj, criterion) {
     UseMethod("refit")
@@ -29,7 +45,7 @@ refit.batch.pulsar <- function(obj, criterion) {
 .refit.pulsar <- function(obj, criterion) {
     est <- vector('list', 2)
     names(est) <- c('est', 'refit')
-    fin <- getArgs(obj$call, obj$envcl)
+    fin <- getArgs(obj$call, obj$envir)
     ## call est function on original dataset
     est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))
     if (missing(criterion)) criterion <- eval(fin$criterion)
