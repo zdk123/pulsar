@@ -57,7 +57,6 @@
 #'                 rep.num=20, criterion=c('stars', 'gcd'),
 #'                 lb.stars=TRUE, ub.stars=TRUE)
 #' plot(out.b)
-#' @useDynLib pulsar
 #' @importFrom Matrix mean triu
 #' @export
 pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thresh = 0.1,
