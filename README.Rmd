@@ -2,13 +2,13 @@
 
 ```{r, echo = FALSE, eval=TRUE}
 opts_knit$set(
-#  upload.fun = function(file) imgur_upload(file, "ce3138fd1186b7d"), 
+  upload.fun = function(file) imgur_upload(file, "ce3138fd1186b7d"), 
   base.url = NULL) # upload all images to imgur.com
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#"
 )
-pulsarchunks <- TRUE
+pulsarchunks <- FALSE
 ```
 
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path.
