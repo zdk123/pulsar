@@ -2,6 +2,18 @@
 ##   represented as an adjacency matrix (can be sparse) ##
 ## 
 
+
+#' Graph dissimilarity
+#'
+#' Dissimilarity matrix of a graph is here defined as the number of shared neighbors any two nodes.
+#'
+#' @param G adjacency matrix (dense or sparse) of a graph.
+#' @param sim bool: return Graph similarity instead (which is just 1-dissimilarity)
+#' @param loops bool: should self loops be considered
+#'
+#' @return a pxp dissimilarity matrix
+#' @references Bochkina, N. (2015). Selection of the Regularization Parameter in Graphical Models using a Priori Knowledge of Network Structure, arXiv: 1509.05326.
+#' @export
 graph.diss <- function(G, sim=FALSE, loops=FALSE) {
   dmat <- GraphDiss(G)
   dmat[is.nan(dmat)] <- 1
@@ -10,12 +22,23 @@ graph.diss <- function(G, sim=FALSE, loops=FALSE) {
   dmat
 }
 
+## DEPRECATED WITHOUT rARPACK
+##eigs_sym.dsCMatrix <- function(A, ...) {
+##    eigs_sym(as(A, 'dgCMatrix'), ...)
+##}
 
-eigs_sym.dsCMatrix <- function(A, ...) {
-    eigs_sym(as(A, 'dgCMatrix'), ...)
-}
-
-
+#' Natural Connectivity
+#'
+#' Compute the natural connectivity of a graph
+#' 
+#' @param G adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given
+#' @param eig precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for G.
+#' @param norm should the natural connectivity score be normalized
+#'
+#' @details The natural connectivity of a graph is a useful robustness measure of complex networks, corresponding to the average eigenvalue of the adjacency matrix. 
+#' @return numeric natural connectivity score
+#' @references Jun, W., Barahona, M., Yue-Jin, T., & Hong-Zhong, D. (2010). Natural Connectivity of Complex Networks. Chinese Physics Letters, 27(7), 78902. doi:10.1088/0256-307X/27/7/078902
+#' @export
 natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 ## eigs -> precomputed eigendecomp
 
@@ -46,72 +69,91 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   else x/sum(x)
 }
 
-egraphletlist <- function(G, norm=TRUE) {
-  ## assume G1, G2 are sparse Matrix objects
-  Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
-#  n <- length(orbind)
-  if (ncol(Elist) < 1) return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
-#  library(orca)
-  gcount <- orca::ecount4(Elist)
-  if (norm) {
-    p <- nrow(G)
-    normv <- c(choose(p, 2), rep(choose(p, 3), 3), rep(choose(p, 4), 8))
-  }
+
+#egraphletlist <- function(G, norm=TRUE) {
+#  ## assume G1, G2 are sparse Matrix objects
+#  Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
+##  n <- length(orbind)
+#  if (ncol(Elist) < 1 || nrow(Elist < 1)) 
+#    return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
+#  gcount <- orca::ecount4(Elist)
+#  if (norm) {
+#    p <- nrow(G)
+#    normv <- c(choose(p, 2), rep(choose(p, 3), 3), rep(choose(p, 4), 8))
+#  }
+##  if (max(Elist) < nrow(G)) {
+#### if edges are missing from nodes at the end of the graph, add them back
+##      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
+##      gcount <- rbind(gcount, gextra)
+##  }
+#  ## expand to all possible edges
+#  ind    <- (Elist[,2]-1)*nrow(G) + Elist[,1]
+#  revind <- (Elist[,1]-1)*ncol(G) + Elist[,2]
+#  grlist <- vector('list', ncol(gcount))
+#  return(lapply(1:12, function(i) {
+#    gvec <- gcount[,i]
+#    if (norm) gvec <- gvec/normv[i]
+#    gmat <- Matrix(0, nrow=nrow(G), ncol=ncol(G))
+#    gmat[ind]    <- gvec
+#    gmat[revind] <- gvec
+#    gmat
+#  }))
+###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+###  gcor[upper.tri(gcor)]
+#}
+
+
+#vgraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+#  ## assume G1, G2 are sparse Matrix objects
+#  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
+##  n <- length(orbind)
+#  if (ncol(Elist) < 1) return(matrix(0, nrow(G), 15))
+##  library(orca)
+#  gcount <- .C("count4", Elist, dim(Elist),
+#      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
 #  if (max(Elist) < nrow(G)) {
 ### if edges are missing from nodes at the end of the graph, add them back
 #      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
 #      gcount <- rbind(gcount, gextra)
 #  }
-  ## expand to all possible edges
-  ind    <- (Elist[,2]-1)*nrow(G) + Elist[,1]
-  revind <- (Elist[,1]-1)*ncol(G) + Elist[,2]
-  grlist <- vector('list', ncol(gcount))
-  return(lapply(1:12, function(i) {
-    gvec <- gcount[,i]
-    if (norm) gvec <- gvec/normv[i]
-    gmat <- Matrix(0, nrow=nrow(G), ncol=ncol(G))
-    gmat[ind]    <- gvec
-    gmat[revind] <- gvec
-    gmat
-  }))
-##  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-##  gcor[upper.tri(gcor)]
-}
+#  return(gcount)
+#  ## expand to all possible edges
+###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+###  gcor[upper.tri(gcor)]
+#}
 
 
-vgraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
-  ## assume G1, G2 are sparse Matrix objects
-  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
-#  n <- length(orbind)
-  if (ncol(Elist) < 1) return(matrix(0, nrow(G), 15))
-#  library(orca)
-  gcount <- .C("count4", Elist, dim(Elist),
-      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
-  if (max(Elist) < nrow(G)) {
-## if edges are missing from nodes at the end of the graph, add them back
-      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
-      gcount <- rbind(gcount, gextra)
-  }
-  return(gcount)
-  ## expand to all possible edges
-##  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-##  gcor[upper.tri(gcor)]
-}
-
-gcdvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
-
-  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
+#' Compute graphlet correlations over the desired orbits for a single graph \code{G}
+#' 
+#' @param G adjacency matrix (dense or sparse) of a graph.
+#' @param orbind index vector for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but index-by-1 is used in this package.
+#'
+#' @references Hočevar, T., & Demšar, J. (2014). A combinatorial approach to graphlet counting. Bioinformatics (Oxford, England), 30(4), 559–65. doi:10.1093/bioinformatics/btt717
+#' @references Yaveroğlu, Ö. N., Malod-Dognin, N., Davis, D., Levnajic, Z., Janjic, V., Karapandza, R., … Pržulj, N. (2014). Revealing the hidden language of complex networks. Scientific Reports, 4, 4547. doi:10.1038/srep04547
+#' @importFrom stats cor
+#' @importFrom methods as
+#' @export
+gcvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
+  if (length(orbind) < 2) stop("Only one orbit selected, need at least two to calculate graphlet correlations")
+  if (any(orbind > 15))   stop("Only 15 orbits, from 4-node graphlets, can be selected")
+  Elist <- Matrix::summary(as(G, 'symmetricMatrix'))[,-3]
   n <- length(orbind)
-  if (ncol(Elist) < 1) return(rep(0, n*(n-1)/2))
-#  library(orca)
-  gcount <- .C("count4", Elist, dim(Elist),
-      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
+  if (ncol(Elist) < 1 || nrow(Elist) < 1) {
+      return(rep(0, n*(n-1)/2))
+  }
+
+  gcount <- orca::count4(Elist)
+# deprecate direct call to count4 for CRAN submission
+#  gcount <- .C("count4", Elist, dim(Elist),
+#      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits
   ## expand to all possible edges
-  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
+  ##  # warnings here are due to std dev == 0. This almost always occurs for a completely connected
+  ## or completely empty graph and can be safely suppressed.
+  gcor <- suppressWarnings(cor(rbind(gcount[,orbind],1), method='spearman'))
   gcor[upper.tri(gcor)]
 }
 
-
+#' @keywords internal
 subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 ## Code from estrada, for undirected graph represented by adjacency matrix M
 ## also return odd/even contributions and the first eigen vector
@@ -140,20 +182,34 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
   return(out)
 }
 
-.SMA <- function(x) ((mean(abs(x)))) 
+#' @keywords internal
+.SMA <- function(x) ((mean(abs(x))))
 
+
+#' Estrada class of a graph
+#'
+#' Estrada proposes that graphs can be classified in 1 of 4 classes. We call this the Estrada index.
+#' These are:
+#'   I. Expander
+#'  II. Cluster
+#' III  Core-Periphery
+#' IV   Mixed
+#' @param Graph pxp adjacency matrix for a graph
+#' @param evthresh tolerance for a zero eigenvalue
+#' @return Estrada index (1-4)
+#' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1–12. doi:10.1103/PhysRevE.75.016103
+#' @export
 estrada.class <- function(Graph, evthresh=1e-3) {
-
   if (class(Graph) != "subgraph.centrality")
       Graph <- subgraph.centrality(Graph)
 
   ev1  <- Graph$evec[,1]
   eval <- Graph$evals[1]
 
-#  if (length(unique(sign(ev1))) == 1 && Graph$evals[2] > 0) { ## try the second eigen vector
-#      ev1  <- Graph$evec[,2]
-#      eval <- Graph$evals[2]
-#  }
+  if (length(unique(sign(ev1))) == 1 && Graph$evals[2] > 0) { ## try the second eigen vector
+      ev1  <- Graph$evec[,2]
+      eval <- Graph$evals[2]
+  }
   subgodd <- Graph$odd
   Evratio <- pmax(ev1^2 * sinh(eval) / subgodd, evthresh)
   Evratio[is.nan(Evratio)] <- 0
@@ -171,21 +227,19 @@ estrada.class <- function(Graph, evthresh=1e-3) {
   return(eclass)
 }
 
-
+#' @keywords internal
 .nonzero <- function(x, tol=.Machine$double.eps) 
     pmax(x, .Machine$double.eps) > .Machine$double.eps*2
 
-
+#' @keywords internal
 largestCC <- function(G, ncc=1, tol=.Machine$double.eps) {
   n  <- ncol(G)
   if (ncc > n) stop('more components than nodes')
   diag(G) <- 1
   Mn <- matPow(G, n)
   Mnsvd <- svd(G, nu=0, nv=ncc)
-  
   keepncc <- which(.nonzero(Mnsvd$d[1:ncc]))
   if (length(keepncc) < ncc) warning("Fewer Connected components than desired")
-  
   vects <- Mnsvd$v[,keepncc,drop=FALSE]
   apply(abs(vects), 2, function(x) which(.nonzero(x)))
 }

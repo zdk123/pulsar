@@ -29,25 +29,24 @@ arma::mat GraphDiss_sp(const arma::sp_mat M) {
 //[[Rcpp::export]]
 arma::mat GraphDiss(SEXP M) {
     if (Rf_isS4(M)) {
-        if (Rf_inherits(M, "dsCMatrix")) {
+        if (Rf_inherits(M, "dsCMatrix") || Rf_inherits(M, "lsCMatrix")) {
             arma::sp_mat spM = as<arma::sp_mat>(M);
             return GraphDiss_sp(spM + spM.t());
-        } ;
-        if (Rf_inherits(M, "dgCMatrix")) {
-            return GraphDiss_sp(as<arma::sp_mat>(M));
-        } ;
-        stop("unknown S4 class of M") ;
+        } else if (Rf_inherits(M, "dgCMatrix") || Rf_inherits(M, "lgCMatrix")) {
+            arma::sp_mat spM = as<arma::sp_mat>(M);
+            return GraphDiss_sp(spM);
+        } else {
+            stop("unknown S4 class of M") ;
+        }
     } else {
         return GraphDiss_dense(as<arma::mat>(M)) ;
     } 
 }
 
-//[[Rcpp::export]]
 arma::vec rowVars(arma::mat m) {
     return var(m, 0, 1);
 }
 
-//[[Rcpp::export]]
 arma::vec colVars(arma::mat m) {
     return rowVars(m.t());
 }
@@ -99,5 +98,3 @@ arma::mat matPow(SEXP M, int n) {
         return matPow_dense(as<arma::mat>(M), n) ;
     } 
 }
-
-

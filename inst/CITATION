@@ -1,0 +1,22 @@
+bibentry(header="To cite pulsar in publications use:",
+
+  bibtype  = "article",
+  title        = "Generalized Stability Approach for Regularized Graphical Models",
+  author       = personList(as.person("Christian L. M\u00FCller"),
+                   as.person("Richard A. Bonneau"),
+                   as.person("Zachary D. Kurtz")),
+  journal = "pre-print",
+  archivePrefix = "arXiv",
+  primaryClass = "stat.ME",
+  arxivId = "1605.07072",
+  eprint = "1605.07072",
+  month = "May",
+  url = "http://arxiv.org/abs/1605.07072",
+  year = "2016",
+
+  textVersion  =
+  paste("M\u00FCller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).",
+        "Generalized Stability Approach for Regularized Graphical Models.",
+        "arXiv. Methodology; Molecular Networks; Applications; Computation.",
+        "Retrieved from http://arxiv.org/abs/1605.07072.")
+)

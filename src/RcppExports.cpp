@@ -17,28 +17,6 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
-// rowVars
-arma::vec rowVars(arma::mat m);
-RcppExport SEXP pulsar_rowVars(SEXP mSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< arma::mat >::type m(mSEXP);
-    __result = Rcpp::wrap(rowVars(m));
-    return __result;
-END_RCPP
-}
-// colVars
-arma::vec colVars(arma::mat m);
-RcppExport SEXP pulsar_colVars(SEXP mSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< arma::mat >::type m(mSEXP);
-    __result = Rcpp::wrap(colVars(m));
-    return __result;
-END_RCPP
-}
 // matPow
 arma::mat matPow(SEXP M, int n);
 RcppExport SEXP pulsar_matPow(SEXP MSEXP, SEXP nSEXP) {

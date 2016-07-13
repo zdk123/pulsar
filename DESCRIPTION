@@ -1,12 +1,36 @@
 Package: pulsar
-Title: Parallel utilities for lambda selection along a regularization path
-Version: 0.1
-Authors.R: person("Zachary", "Kurtz", role = c("aut", "cre"), email="zachary.kurtz@med.nyu.edu")
-Description: An implementation of the Stability Approach to Regularization Selection (StARS, H. Liu - 2010), with options for speedups, paraellizations and alternative stability metrics. This package is particulaly intended for L1-regularized graphical models (glasso or Meinshausen-Buhlmann neighborhood selection), using your favorite implementation (i.e. huge, QUIC, glmnet, etc) though the method is quite generic (via function passing) and could be used for Lasso-type problems as well. 
-    In batch computing systems, we use the BatchJobs Map/Reduce strategy (for batch computing systems like Torque, LSF, SLURM or SGE) which can significantly reduce the computation and memory burdens for StARS, even compared to multicore/parallelized implementations. 
-    Additionally, this package contains options for using a heuristic lower bound on lambda, that works well in practice when the dimensionality is high (above 20 variables or so). Thus, computational burden is reduced when many subsamples are required.
-Depends: R (>= 3.2.0), Matrix
+Title: Parallel Utilities for Lambda Selection along a Regularization Path
+Version: 0.2.0
+Encoding: UTF-8
+Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
+             person("Christian", "M\u00FCller", role = c("ctb"), email="cmueller@simonsfoundation.org"))
+Author: Zachary Kurtz [aut, cre],
+    Christian M\u00FCller [ctb]
+Description: An implementation of the Stability Approach to
+    Regularization Selection (StARS, H. Liu - 2010), with options for speedups,
+    paralellizations and alternate/complementary metrics (notably, graphlet
+    stability). Intended for L1-regularized graphical
+    models (e.g. glasso or Meinshausen-Buhlmann neighborhood selection), using your
+    favorite implementation (i.e. huge, QUIC, etc). The method is quite generic (via
+    function passing) and could be used for Lasso-type problems as well.
+URL https: //github.com/zdk123/pulsar, https://arxiv.org/abs/1605.07072
+BugReports: https://github.com/zdk123/pulsar/issues
+Depends:
+    R (>= 3.2.0)
 License: GPL (>= 2)
-Suggests: huge, QUIC, rARPACK, orca, BatchJobs
-Imports: Rcpp (>= 0.11.3), RcppArmadillo (>= 0.6.500.4.0)
+Suggests:
+    huge,
+    QUIC,
+    orca,
+    BatchJobs,
+    testthat
+Imports:
+    methods,
+    graphics,
+    stats,
+    utils,
+    Matrix,
+    Rcpp (>= 0.11.3),
+    RcppArmadillo (>= 0.6.500.4.0)
 LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 5.0.1

@@ -5,14 +5,6 @@ GraphDiss <- function(M) {
     .Call('pulsar_GraphDiss', PACKAGE = 'pulsar', M)
 }
 
-rowVars <- function(m) {
-    .Call('pulsar_rowVars', PACKAGE = 'pulsar', m)
-}
-
-colVars <- function(m) {
-    .Call('pulsar_colVars', PACKAGE = 'pulsar', m)
-}
-
 matPow <- function(M, n) {
     .Call('pulsar_matPow', PACKAGE = 'pulsar', M, n)
 }
