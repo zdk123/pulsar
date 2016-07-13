@@ -5,14 +5,14 @@
 \alias{plot.pulsar}
 \title{Plot a pulsar output}
 \usage{
-\method{plot}{pulsar}(x, scale = TRUE, invlam = FALSE, loglam = FALSE,
-  legends = TRUE)
+\method{plot}{pulsar}(x, ...)
 
-\method{plot}{batch.pulsar}(x, scale = TRUE, invlam = FALSE,
-  loglam = FALSE, legends = TRUE)
+\method{plot}{batch.pulsar}(x, ...)
 }
 \arguments{
 \item{x}{a pulsar or batch.pulsar object}
+
+\item{...}{system reserved usage (ignored)}
 
 \item{scale}{Flag to scale non-StARS criterion to StARS range (or 1)}
 

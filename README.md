@@ -164,7 +164,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-11](http://i.imgur.com/oxAk9MS.png)
+![plot of chunk unnamed-chunk-11](http://i.imgur.com/gf0wpCM.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -182,7 +182,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/BcuEPAW.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/qoBLRhS.png)
 
 ## Batch Mode
 
@@ -218,13 +218,13 @@ up and running. Download the files in a browser or directly in an R session:
 
 
 ```r
-url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/extdata"
+url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
 url <- paste(url, ".BatchJobsSerialTest.R", sep="/") # Serial mode
 ## url <- paste(url, ".BatchJobsMC.R", sep="/") # uncomment for multicore
 download.file(url, destfile=".BatchJobs.R")
 ```
 
-Since BatchJobs is imported by `pulsar`, it needs to be loaded.
+Since BatchJobs is not imported by `pulsar`, it needs to be loaded.
 Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
 multiple times).
 
@@ -259,7 +259,6 @@ but named `init.reg` and `init.id` from `batch.pulsar`.
 ```r
 out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
                      lb.stars=TRUE, ub.stars=TRUE)
-# Error in .update.pulsar(object, ...): unused arguments (criterion = c("stars", "gcd"), lb.stars = TRUE, ub.stars = TRUE)
 ```
 
 Check that we get the same result from bounded/batch mode pulsar:
@@ -267,7 +266,7 @@ Check that we get the same result from bounded/batch mode pulsar:
 
 ```r
 opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
-# Error in match(x, table, nomatch = 0L): object 'out.bbatch' not found
+# [1] TRUE
 ```
 
 ### A few notes on batch mode pulsar

@@ -197,13 +197,13 @@ For this README I suggest using BatchJobs's convenient serial or multicore test 
 up and running. Download the files in a browser or directly in an R session:
 
 ```{r, eval=pulsarchunks}
-url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/extdata"
+url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
 url <- paste(url, ".BatchJobsSerialTest.R", sep="/") # Serial mode
 ## url <- paste(url, ".BatchJobsMC.R", sep="/") # uncomment for multicore
 download.file(url, destfile=".BatchJobs.R")
 ```
 
-Since BatchJobs is imported by `pulsar`, it needs to be loaded.
+Since BatchJobs is not imported by `pulsar`, it needs to be loaded.
 Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
 multiple times).
 
@@ -275,7 +275,7 @@ agglomerative coefficient over the path.
 
 ```{r, eval=pulsarchunks, warning=FALSE, message=FALSE}
 out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs,
-            rep.num=100, criterion='diss', seed=10010, ncores=2)
+                    rep.num=100, criterion='diss', seed=10010, ncores=2)
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)

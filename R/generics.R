@@ -58,17 +58,18 @@ print.pulsar <- function(x, ...) {
 #' @param invlam Flag to plot 1/lambda
 #' @param loglam Flag to plot log[lambda]
 #' @param legends Flag to plot legends
+#' @param ... system reserved usage (ignored)
 #' 
 #' @details If both invlam and loglam are given, log[1/lambda] is plotted
 #' @export
-plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE) {
-    .plot.pulsar(x, scale, invlam, loglam)
+plot.pulsar <- function(x, ...) {
+    .plot.pulsar(x, ...)
 }
 
 #' @rdname plot.pulsar
 #' @export
-plot.batch.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE) {
-    .plot.pulsar(x, scale, invlam, loglam)
+plot.batch.pulsar <- function(x, ...) {
+    .plot.pulsar(x, ...)
 }
 
 #' @importFrom graphics plot points legend
@@ -155,22 +156,31 @@ plot.batch.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends
     }
 }
 
+#' Update a pulsar call
+#'
+#' Update and re-fit a model, with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
+#'
+#' @param object a pulsar or batch.pulsar object
+#' @param ... arguments to \code{pulsar} to update
+#' @param evaluate Flag to evaluate the function. If FALSE, the updated call is returned without evaluation
+#' @return the same output as \code{pulsar} or \code{batch.pulsar}
 #' @export
 update.pulsar <- function(object, ..., evaluate=TRUE) {
     extras <- match.call(expand.dots=FALSE)$...
     .update.pulsar(object, extras, evaluate)
 }
 
+#' @rdname update.pulsar
 #' @export
 update.batch.pulsar <- function(object, ..., evaluate=TRUE) {
     extras <- match.call(expand.dots=FALSE)$...
-    .update.pulsar(object, ...)
+    .update.pulsar(object, extras, evaluate)
 }
 
 #' @importFrom stats update.default
 #' @keywords internal
 .update.pulsar <- function(object, extras, evaluate) {
-    call <- object$call
+    call <- getCall(object)
     if (is.null(object$envcl)) object$envcl <- parent.frame()
     if (length(extras)) {
         existing <- !is.na(match(names(extras), names(call)))
