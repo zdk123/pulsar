@@ -9,8 +9,8 @@ test_that("graph.diss has expected output", {
     Gdiss <- graph.diss(G)
     expect_is(G, "Matrix")
     expect_is(G, "dsCMatrix")
-    expect_is(Gdiss, "matrix")
-    expect_equivalent(diag(Gdiss),  rep(0, p))
+    expect_is(Gdiss, "dgeMatrix")
+    expect_equivalent(Matrix::diag(Gdiss), rep(0, p))
 })
 
 test_that("natural connectivity has expected output", {

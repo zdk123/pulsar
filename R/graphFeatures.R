@@ -15,11 +15,20 @@
 #' @references Bochkina, N. (2015). Selection of the Regularization Parameter in Graphical Models using a Priori Knowledge of Network Structure, arXiv: 1509.05326.
 #' @export
 graph.diss <- function(G, sim=FALSE, loops=FALSE) {
-  dmat <- GraphDiss(G)
-  dmat[is.nan(dmat)] <- 1
+  dmat <- GraphDiss2(G)
+  dmat[is.na(dmat)] <- 1
   if (!loops) diag(dmat) <- 0
   if (sim) dmat <- 1-dmat
   dmat
+}
+
+#' @import Matrix
+#' @keywords internal
+GraphDiss2 <- function(G) {
+    Gprod <- G %*% G
+    Gdiag   <- Matrix::diag(Gprod)
+    degProd <- Gdiag %*% t(Gdiag)
+    1 - (Gprod / sqrt(degProd))
 }
 
 ## DEPRECATED WITHOUT rARPACK
@@ -226,21 +235,3 @@ estrada.class <- function(Graph, evthresh=1e-3) {
   if (log10(Devs$`-1`+1e-3) > -2.1)  eclass <- eclass[2] else eclass <- eclass[1]
   return(eclass)
 }
-
-#' @keywords internal
-.nonzero <- function(x, tol=.Machine$double.eps) 
-    pmax(x, .Machine$double.eps) > .Machine$double.eps*2
-
-#' @keywords internal
-largestCC <- function(G, ncc=1, tol=.Machine$double.eps) {
-  n  <- ncol(G)
-  if (ncc > n) stop('more components than nodes')
-  diag(G) <- 1
-  Mn <- matPow(G, n)
-  Mnsvd <- svd(G, nu=0, nv=ncc)
-  keepncc <- which(.nonzero(Mnsvd$d[1:ncc]))
-  if (length(keepncc) < ncc) warning("Fewer Connected components than desired")
-  vects <- Mnsvd$v[,keepncc,drop=FALSE]
-  apply(abs(vects), 2, function(x) which(.nonzero(x)))
-}
-
