@@ -13,6 +13,7 @@
 #' @examples
 #'
 #' ## Generate the data with huge:
+#' \dontrun{
 #' library(huge)
 #' set.seed(10010)
 #' p <- 40 ; n <- 1200
@@ -25,7 +26,7 @@
 #'                 rep.num=20, criterion='stars')
 #'
 #' fit  <- refit(out.p)
-
+#' }
 #' @export
 refit <- function(obj, criterion) {
     UseMethod("refit")
@@ -33,11 +34,6 @@ refit <- function(obj, criterion) {
 
 #' @export
 refit.pulsar <- function(obj, criterion) {
-    .refit.pulsar(obj, criterion)
-}
-
-#' @export
-refit.batch.pulsar <- function(obj, criterion) {
     .refit.pulsar(obj, criterion)
 }
 

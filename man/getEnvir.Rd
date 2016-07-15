@@ -2,11 +2,17 @@
 % Please edit documentation in R/generics.R
 \name{getEnvir}
 \alias{getEnvir}
+\alias{getEnvir.default}
 \title{Get calling environment}
 \usage{
 getEnvir(x)
+
+\method{getEnvir}{default}(x)
+}
+\arguments{
+\item{x}{S3 object to extract the ennvironment}
 }
 \description{
-Generic function for extracting a environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+Generic function for extracting an environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
 }
 

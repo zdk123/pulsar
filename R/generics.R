@@ -1,3 +1,9 @@
+#' Print S3 object \code{pulsar.refit}
+#'
+#' Print information about the model, path length, graph dimension, criterion and optimal indices and graph sparsity.
+#'
+#' @param x a \code{pulsar.refit}. output from \code{refit}
+#' @param ... ignored
 #' @importFrom utils capture.output
 #' @export
 print.pulsar.refit <- function(x, ...) {
@@ -16,18 +22,26 @@ print.pulsar.refit <- function(x, ...) {
     }
 }
 
-#' @export
-print.batch.pulsar <- function(x, ...) {
-    fin <- getArgs(getCall(x), getEnvir(x))
-    cat("Mode: batch")
-    .print.pulsar(x, fin)
-}
 
+#' Print S3 object \code{pulsar} and \code{batch.pulsar}
+#'
+#' Print information about the model, path length, graph dimension, criterion and optimal indices, if defined.
+#'
+#' @param x a \code{pulsar} or \code{batch.pulsar} object
+#' @param ... Ignored
 #' @export
 print.pulsar <- function(x, ...) {
     fin <- getArgs(getCall(x), getEnvir(x))
     mode <- ifelse(fin$ncores > 1, "parallel", "serial")
     cat("Mode:", mode)
+    .print.pulsar(x, fin)
+}
+
+#' @rdname print.pulsar
+#' @export
+print.batch.pulsar <- function(x, ...) {
+    fin <- getArgs(getCall(x), getEnvir(x))
+    cat("Mode: batch")
     .print.pulsar(x, fin)
 }
 
@@ -46,7 +60,7 @@ print.pulsar <- function(x, ...) {
         optext  <- ifelse(is.null(opt.ind), "",
           paste("... opt: index ", opt.ind, ", lambda ",
           signif(fin$fargs$lambda[opt.ind], 3), sep=""))
-        paste("  ", cr, optext, sep="")
+        paste("  ", x[[cr]]$criterion, optext, sep="")
         })
     cat(critext, "\n", paste(critext2, collapse="\n"), "\n", sep="")
 }
@@ -62,14 +76,8 @@ print.pulsar <- function(x, ...) {
 #' 
 #' @details If both invlam and loglam are given, log[1/lambda] is plotted
 #' @export
-plot.pulsar <- function(x, ...) {
-    .plot.pulsar(x, ...)
-}
-
-#' @rdname plot.pulsar
-#' @export
-plot.batch.pulsar <- function(x, ...) {
-    .plot.pulsar(x, ...)
+plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE, ...) {
+    .plot.pulsar(x, scale, invlam, loglam, legends)
 }
 
 #' @importFrom graphics plot points legend
@@ -164,20 +172,14 @@ plot.batch.pulsar <- function(x, ...) {
 #' @param ... arguments to \code{pulsar} to update
 #' @param evaluate Flag to evaluate the function. If FALSE, the updated call is returned without evaluation
 #' @return the same output as \code{pulsar} or \code{batch.pulsar}
+#' @importFrom stats update
 #' @export
 update.pulsar <- function(object, ..., evaluate=TRUE) {
     extras <- match.call(expand.dots=FALSE)$...
     .update.pulsar(object, extras, evaluate)
 }
 
-#' @rdname update.pulsar
-#' @export
-update.batch.pulsar <- function(object, ..., evaluate=TRUE) {
-    extras <- match.call(expand.dots=FALSE)$...
-    .update.pulsar(object, extras, evaluate)
-}
-
-#' @importFrom stats update.default getCall
+#' @importFrom stats getCall
 #' @keywords internal
 .update.pulsar <- function(object, extras, evaluate) {
     call <- getCall(object)
@@ -197,12 +199,15 @@ update.batch.pulsar <- function(object, ..., evaluate=TRUE) {
 
 #' Get calling environment
 #'
-#' Generic function for extracting a environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+#' Generic function for extracting an environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+#'
+#' @param x S3 object to extract the ennvironment
 #' @export
 getEnvir <- function(x) {
     UseMethod("getEnvir")
 }
 
+#' @rdname getEnvir
 #' @export
 getEnvir.default <- function(x) {
     getElement(x, "envir")

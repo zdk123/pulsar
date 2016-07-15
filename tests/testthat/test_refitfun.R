@@ -5,16 +5,18 @@ p <- 20
 set.seed(10010)
 dat <- huge::huge.generator(p*20, p, "hub", verbose=FALSE, v=.25, u=.4)
 G <- dat$theta
-lams <- exp(seq(log(.3), log(.1), length.out=10))
+lams <- getLamPath(.3, .1, 5)
 lb <- TRUE
 out.p <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE), 
-                rep.num=10, criterion=c('stars', 'gcd'), seed=10010, 
+                rep.num=5, criterion=c('stars', 'gcd'), seed=10010, 
                 lb.stars=lb, ub.stars=TRUE)
-#conffile <- "../../inst/extdata/.BatchJobsSerialTest.R"
-#lb <- TRUE
-#out.bp <- batch.pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
-#                  rep.num=5, criterion=c('stars', 'gcd'), lb.stars=lb, ub.stars=TRUE,
-#                  conffile=conffile, progressbars=FALSE, cleanup=TRUE, seed=10010)
+
+suppressPackageStartupMessages(library(BatchJobs))
+options(BatchJobs.verbose=FALSE)
+conffile <- file.path(system.file(package="pulsar"), "extdata", "BatchJobsSerialTest.R")
+out.bp <- batch.pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
+                  rep.num=5, criterion=c('stars', 'gcd'), lb.stars=lb, ub.stars=TRUE,
+                  conffile=conffile, progressbars=FALSE, cleanup=TRUE, seed=10010)
 
 
 testrefit <- function(desc, out) {
@@ -38,4 +40,4 @@ testrefit <- function(desc, out) {
 }
 
 testrefit("refitting pulsar gives correct warnings & output",        out.p)
-#testrefit("refitting batch pulsar gives correct warnings & output", out.bp)
+testrefit("refitting batch pulsar gives correct warnings & output", out.bp)

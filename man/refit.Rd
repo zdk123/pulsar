@@ -25,6 +25,7 @@ Run the supplied graphical model function on the whole dataset and refit with th
 \examples{
 
 ## Generate the data with huge:
+\dontrun{
 library(huge)
 set.seed(10010)
 p <- 40 ; n <- 1200
@@ -37,5 +38,6 @@ out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
                 rep.num=20, criterion='stars')
 
 fit  <- refit(out.p)
+}
 }
 

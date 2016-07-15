@@ -39,7 +39,7 @@
 #'}
 #' @return call: the original function call
 #' @examples
-#'
+#'\dontrun{
 #' ## Generate the data with huge:
 #' library(huge)
 #' set.seed(10010)
@@ -57,6 +57,7 @@
 #'                 rep.num=20, criterion=c('stars', 'gcd'),
 #'                 lb.stars=TRUE, ub.stars=TRUE)
 #' plot(out.b)
+#' }
 #' @importFrom Matrix mean triu
 #' @export
 pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thresh = 0.1,

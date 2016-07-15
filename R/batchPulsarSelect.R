@@ -249,7 +249,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     }
     est$call  <- match.call()
     est$envir <- parent.frame()
-    return(structure(est, class = "batch.pulsar"))
+    return(structure(est, class = c("batch.pulsar", "pulsar")))
 }
 
 #' @keywords internal

@@ -5,7 +5,7 @@
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path.
 
 This package is an implementation of the Stability Approach to Regularization Selection 
-([StARS, H. Liu - 2010](https://papers.nips.cc/paper/3966-stability-approach-to-regularization-selection-stars-for-high-dimensional-graphical-models.pdf)),
+([StARS, H. Liu - 2010](http://papers.nips.cc/paper/3966-stability-approach-to-regularization-selection-stars-for-high-dimensional-graphical-models.pdf)),
 with options for speedups, paralellizations and alternate/complementary metrics 
 (most notably, graphlet stability). This package is intended for selection of L1-regularized graphical
 models (e.g. glasso or Meinshausen-Buhlmann neighborhood selection), where the level of sparsity is
@@ -22,12 +22,12 @@ or so).  Thus, computational burden is greatly reduced, especially when many sub
 and even when running in embarassingly parallel (batch) mode. We also use these bounds to narrow the
 range that we look for relative stable points over an induced-subgraph (graphlet) stability metric.
 
-In batch computing systems, we use the [BatchJobs](https://cran.r-project.org/web/packages/BatchJobs/)
+In batch computing systems, we use the [BatchJobs](http://cran.r-project.org/package=BatchJobs)
 Map/Reduce strategy (for batch computing systems such as Torque, LSF, SLURM or SGE) which can 
 significantly reduce the computation and memory burdens for StARS. This is useful for hpc users, 
 when the number of processors available on a multicore machine only allows modest parallelization.
 
-Please see the paper preprint on [arXiv](https://arxiv.org/abs/1605.07072).
+Please see the paper preprint on [arXiv](http://arxiv.org/abs/1605.07072).
 
 
 ## Installation
@@ -51,8 +51,8 @@ For this readme, we will use synthetic data, generated from the `huge` package.
 library(huge)
 set.seed(10010)
 p <- 40 ; n <- 1200
-dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-lams  <- getLamPath(.2, .01, len=40)
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
+lams <- getLamPath(.2, .01, len=40)
 ```
 
 You can use the `pulsar` package to run StARS, serially, as a drop-in replacement for the 
@@ -79,7 +79,7 @@ out.p
 # Subsamples:  20 
 # Graph dim:   40 
 # Criterion:
-#   stars... opt: index 15, lambda 0.132
+#   stars.stability... opt: index 15, lambda 0.132
 fit.p
 # Pulsar-selected refit of huge::huge 
 # Path length: 40 
@@ -164,7 +164,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-11](http://i.imgur.com/K3ioGBY.png)
+![plot of chunk unnamed-chunk-11](http://i.imgur.com/wothnOF.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -182,7 +182,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/FVGIRei.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/wbvAY8K.png)
 
 ## Batch Mode
 
@@ -210,17 +210,19 @@ overridden if these need to be retained long term (`regdir` argument to `batch.p
 
 For generating BatchJobs, we need a configuration file (supply a path string to `conffile` argument,
 a good choice is the working directory) and a template file (which is best put in the same directory
-as the config file). Example config and PBS template file for Torque can be found in the /extdata/
-subdirectory of this github. See the BatchJobs homepage for creating templates for other systems.
+as the config file). Example config (BatchJobsTorque.R) and PBS template file (simpletorque.tml) for
+Torque can be found in the inst/extdata/ subdirectory of this github. See the BatchJobs homepage for
+creating templates for other systems.
 
 For this README I suggest using BatchJobs's convenient serial or multicore test mode to get things
-up and running. Download the files in a browser or directly in an R session:
+up and running. Download the files in a browser (if https is not supported) or directly in an R
+session:
 
 
 ```r
 url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
-url <- paste(url, ".BatchJobsSerialTest.R", sep="/") # Serial mode
-## url <- paste(url, ".BatchJobsMC.R", sep="/") # uncomment for multicore
+url <- paste(url, "BatchJobsSerialTest.R", sep="/") # Serial mode
+## url <- paste(url, "BatchJobsMC.R", sep="/") # uncomment for multicore
 download.file(url, destfile=".BatchJobs.R")
 ```
 
@@ -230,10 +232,13 @@ multiple times).
 
 
 ```r
+## uncomment below if BatchJobs is not already installed
+# install.package('BatchJobs')
 library(BatchJobs)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs,
-                rep.num=100, criterion='stars', seed=10010) 
+                rep.num=100, criterion='stars', seed=10010
                 #, cleanup=TRUE)
+             )
 ```
 
 Check that we get the same result from batch mode pulsar:
@@ -244,11 +249,11 @@ opt.index(out.q, 'stars') == opt.index(out.batch, 'stars')
 # [1] TRUE
 ```
 
-It is also possible to run bounded-mode stars in batch, but the first 2 subsamples (2 jobs) will
-run to completetion before the final N-2 are run. This serializes the batch mode a bit, but
-can still be faster for fine grain lambda paths and for sparse graphs. It is also advisable to
-do this for the `gcd` criterion because, computing graphlet frequencies can be costly and this is
-only done for the graphs in the bounded lambda path (in serial/multicore or batch pulsar).
+It is also possible to run bounded-mode stars in batch, but the first 2 subsamples (2 jobs) will run
+to completetion before the final N-2 are run. This serializes the batch mode a bit, but can still be
+faster for fine grain lambda paths and for sparse graphs. It is also advisable to do this for the
+`gcd` criterion because, computing graphlet frequencies can be costly and this is only done for the
+graphs in the bounded lambda path (in serial/multicore or batch pulsar).
 
 To keep the initial N=2 jobs separate from the rest, the string provided to the `init` argument
 ("subtwo" by default) is concatenated to the basename of `regdir`. The registry/id is returned

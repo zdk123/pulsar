@@ -5,13 +5,14 @@ getArgs <- function(call, envir=parent.frame()) {
     fin    <- lapply(call, eval, envir=envir)
     forms  <- formals(fin[[1]])
     iscall <- sapply(forms, class) == 'call'
+    iscall <- iscall & !(names(forms) %in% c('regdir', 'regid'))
     forms[iscall] <- lapply(forms[iscall], eval)
     c(forms[!(names(forms) %in% names(fin))], fin)
 }
 
 #' @keywords internal
 .pcheck <- function(obj) {
-    if (!(class(obj) %in% c('pulsar', 'batch.pulsar')))
+    if (!inherits(obj, 'pulsar'))
         stop("obj must be pulsar output")
 }
 
@@ -38,7 +39,7 @@ get.opt.index <- function(obj, criterion="gcd", ...) {
     if (criterion == 'gcd') {
         if (is.null(obj$stars$lb.index) || !obj$stars$lb.index)
             stop('Lower bound needed for gcd metric (run with lb.stars=TRUE)')
-        gcdind <- which.min(obj[[criterion]]$summary)
+        gcdind <- which.min(getElement(obj, criterion)$summary)
         gcdind <- gcdind + obj$stars$ub.index - 1
         return(gcdind)
     } else {
@@ -56,7 +57,7 @@ get.opt.index <- function(obj, criterion="gcd", ...) {
 opt.index <- function(obj, criterion='stars') {
     .pcheck(obj)
     .critcheck(obj, criterion)
-    obj[[criterion]]$opt.index
+    getElement(obj, criterion)$opt.index
 }
 
 #' @param value Integer index for optimal lambda by criterion
@@ -65,6 +66,7 @@ opt.index <- function(obj, criterion='stars') {
     .pcheck(obj)
     fin <- getArgs(obj$call, obj$envir)
     .critcheck(obj, criterion)
+    if (length(criterion) > 1) stop("Select one criterion")
     if (!is.numeric(value) || value < 1 || value >= length(fin$fargs$lambda))
         stop('Index value must be positive int within range length of lambda path')
     obj[[ criterion ]]$opt.index <- value
@@ -90,7 +92,6 @@ opt.index <- function(obj, criterion='stars') {
 #' ## Theoretical lamda max is the maximum abs value of the empirical covariance matrix
 #' maxCov <- getMaxCov(dat$data)
 #' lams   <- getLamPath(maxCov, 5e-2*maxCov, len=40)
-
 #'
 #' @export
 getLamPath <- function(max, min, len, log=FALSE) {

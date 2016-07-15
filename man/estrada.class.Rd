@@ -19,10 +19,10 @@ Estrada proposes that graphs can be classified in 1 of 4 classes. We call this t
 These are:
   I. Expander
  II. Cluster
-III  Core-Periphery
-IV   Mixed
+III. Core-Periphery
+IV.  Mixed.
 }
 \references{
-Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1–12. doi:10.1103/PhysRevE.75.016103
+Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 }
 

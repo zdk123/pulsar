@@ -62,7 +62,7 @@ Run pulsar stability selection, or other criteria, to select the sparsity of an 
 graphical model.
 }
 \examples{
-
+\dontrun{
 ## Generate the data with huge:
 library(huge)
 set.seed(10010)
@@ -80,5 +80,6 @@ out.b <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
                 rep.num=20, criterion=c('stars', 'gcd'),
                 lb.stars=TRUE, ub.stars=TRUE)
 plot(out.b)
+}
 }
 

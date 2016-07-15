@@ -22,7 +22,6 @@ graph.diss <- function(G, sim=FALSE, loops=FALSE) {
   dmat
 }
 
-#' @import Matrix
 #' @keywords internal
 GraphDiss2 <- function(G) {
     Gprod <- G %*% G
@@ -128,7 +127,7 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 #  return(gcount)
 #  ## expand to all possible edges
 ###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-###  gcor[upper.tri(gcor)]
+###  gcor[upper.tri(gcor)] 
 #}
 
 
@@ -201,12 +200,12 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 #' These are:
 #'   I. Expander
 #'  II. Cluster
-#' III  Core-Periphery
-#' IV   Mixed
+#' III. Core-Periphery
+#' IV.  Mixed.
 #' @param Graph pxp adjacency matrix for a graph
 #' @param evthresh tolerance for a zero eigenvalue
 #' @return Estrada index (1-4)
-#' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1–12. doi:10.1103/PhysRevE.75.016103
+#' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 #' @export
 estrada.class <- function(Graph, evthresh=1e-3) {
   if (class(Graph) != "subgraph.centrality")
