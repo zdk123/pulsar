@@ -1,7 +1,7 @@
 source('pulsarfuns.R')
 
-rseed <- sample.int(1000, 1) # 10010 #
-p <- 16
+rseed <-  10010 #sample.int(1000, 1) #
+p <- 12
 ## generate synthetic data
 set.seed(rseed)
 dat <- huge::huge.generator(p*10, p, "hub", prob=.25, verbose=FALSE, v=.1, u=.5)

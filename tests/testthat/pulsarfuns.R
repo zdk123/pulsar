@@ -37,8 +37,8 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     mlam <- signif(getMaxCov(dat$sigmahat)+.1, 3)
     lams  <- getLamPath(mlam, .05, 20)
     hargs <- c(fargs, list(lambda=lams))
-    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion=c("stars", "gcd"), rep.num=6, ...)
-    outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE)
+    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion=c("stars"), rep.num=5, ...)
+    outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE, criterion=c("stars", "gcd"))
 
 
     test_that("pulsar w/ lambda path works for fun", {
@@ -57,8 +57,8 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
 
     test_that("pulsar bounds are consistent", {
         ## check lengths
-        expect_equal(length(out$gcd$summary), length(out$stars$summary))
-        expect_equal(out$gcd$criterion, "graphlet.stability")
+##        expect_equal(length(out$gcd$summary), length(out$stars$summary))
+        expect_equal(outb$gcd$criterion, "graphlet.stability")
         expect_error(fit <- refit(out, 'stars'), NA)
         expect_equal(outb$stars$opt.ind, out$stars$opt.ind) # same answer using bounds
         ## gcd computed between bounds
@@ -84,22 +84,19 @@ runcomptest <- function(msg, out, out.batch, ...) {
     })
 }
 
-testrefit <- function(desc, out) {
+testrefit <- function(desc, outb) {
     test_that(desc, {
-        expect_warning(fit1 <- refit(out, "stars"), regexp = NA)
-        expect_warning(fit2 <- refit(out, "gcd"), "No optimal index")
+        expect_warning(fit1 <- refit(outb, "stars"), regexp = NA)
+        expect_warning(fit2 <- refit(outb, "gcd"), "No optimal index")
         expect_equal(names(fit1$refit), "stars")
-        expect_error(opt.index(out, 'gcd') <- -1, "Index value")
-        expect_error(opt.index(out, 'gcd') <- get.opt.index(out, 'gcd'), NA)
-        expect_equal(opt.index(out, 'gcd'), out$gcd$opt.index)
-        expect_equal(opt.index(out, 'gcd'), get.opt.index(out, 'gcd'))
-        expect_warning(fit3 <- refit(out), regexp = NA)
+        expect_error(opt.index(outb, 'gcd') <- -1, "Index value")
+        expect_error(opt.index(outb, 'gcd') <- get.opt.index(outb, 'gcd'), NA)
+        expect_equal(opt.index(outb, 'gcd'), outb$gcd$opt.index)
+        expect_equal(opt.index(outb, 'gcd'), get.opt.index(outb, 'gcd'))
+        expect_warning(fit3 <- refit(outb), regexp = NA)
 
         expect_gt(sum(fit3$refit$stars), 0)
         expect_gt(sum(fit3$refit$gcd),   0)
-        expect_warning(fit4 <- refit(out, "foo"), "Unknown criterion")
-
-        out2 <- update(out, lb.stars=FALSE)
-        expect_error(get.opt.index(out2, 'gcd'), "Lower bound needed")
+        expect_warning(fit4 <- refit(outb, "foo"), "Unknown criterion")
     })
 }

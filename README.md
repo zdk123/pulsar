@@ -193,7 +193,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/xcQiX4r.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/lm4FUFu.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -212,7 +212,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/xfLSGhk.png)
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/IR4a5lp.png)
 
 ## Batch Mode
 
@@ -267,7 +267,6 @@ out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010
                           #, cleanup=TRUE
                          )
-# Error in knit("README.Rmd"): Assertion on 'conffile' failed: File does not exist: '.BatchJobs.R'.
 ```
 
 Check that we get the same result from batch mode pulsar:
@@ -293,7 +292,6 @@ but named `init.reg` and `init.id` from `batch.pulsar`.
 ```r
 out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
                      lb.stars=TRUE, ub.stars=TRUE)
-# Error in knit("README.Rmd"): Assertion on 'conffile' failed: File does not exist: '.BatchJobs.R'.
 ```
 
 Check that we get the same result from bounded/batch mode pulsar:
