@@ -211,7 +211,7 @@ multiple times).
 
 ```{r, eval=pulsarchunks, message=FALSE}
 ## uncomment below if BatchJobs is not already installed
-# install.package('BatchJobs')
+# install.packages('BatchJobs')
 library(BatchJobs)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs,
                 rep.num=100, criterion='stars', seed=10010
