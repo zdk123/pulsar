@@ -2,7 +2,7 @@
 % Please edit documentation in R/generics.R
 \name{print.pulsar.refit}
 \alias{print.pulsar.refit}
-\title{Print S3 object \code{pulsar.refit}}
+\title{Print a \code{pulsar.refit} S3 object}
 \usage{
 \method{print}{pulsar.refit}(x, ...)
 }

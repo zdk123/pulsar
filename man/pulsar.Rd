@@ -11,33 +11,23 @@ pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
 
-\item{fun}{pass in a function that returns a list of \eqn{p*p} graphical models along the desired regularization path. The expected inputs to this function are based on the \code{huge} function in the \pkg{huge} package: a raw data input (as opposed to a covariance/correlation matrix) and must return a list or S3 object with a \emph{named} \code{path} list. This should be a list of matrices (or preferable sparse Matrix - see the \pkg{Matrix} package) of adjacency matrices without weights or signs representing the undirected graphical model at each value of \code{lambda}. See details for more information.}
+\item{fun}{pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.}
 
 \item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.}
 
-\item{criterion}{a character vector of selection statistics. Multiple criteria can be supplied. By default, StARS is run. Currently, there are no selection criterion available for summary statistics, aside for stars, so the entire path and summary is returned. The options are:
-\itemize{
-   \item stars (Stability approach to regularization selection)
-   \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
-   \item diss  (Node dissimilarity stability)
-   \item estrada (estrada class)
-   \item vgraphlet (vertex orbit/graphlet frequency, requires the \pkg{orca} package)
-   \item egraphlet (edge orbit/graphlet frequency, requires the \pkg{orca} package)
-   \item nc  (natural connectivity)
-   \item sufficiency (Ravikumar's sufficiency statistic)
-}}
+\item{criterion}{A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.}
 
-\item{thresh}{threshold for selection criterion. Only implemented for StARS. thresh = 0.1 is recommended.}
+\item{thresh}{threshold for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.}
 
 \item{subsample.ratio}{determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.}
 
-\item{rep.num}{number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended if using other summary metrics or if using edge frequencies as confidence scores.}
+\item{rep.num}{number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.}
 
 \item{seed}{A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.}
 
-\item{lb.stars}{Should the lower bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
+\item{lb.stars}{Should the lower bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
 
-\item{ub.stars}{Should the upper bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
+\item{ub.stars}{Should the upper bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
 \item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more paralellization options.}
 }
@@ -47,19 +37,29 @@ an S3 object of class \code{pulsar} with a named member for each stability metri
    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
    \item criterion: the stability criterion used
    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-   \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \emph{0} if no optimum is found or if selection for the criterion is not implemented.
+   \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
   }
 If \code{stars} is included as a criterion then additional arguments include
 \itemize{
-   \item lb.index the lambda index of the lower bound at N=2 samples if \code{lb.stars} flag is set to TRUE
-   \item ub.index the lambda index of the upper bound at N=2 samples if \code{ub.stars} flag is set to TRUE
+   \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
+   \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 }
 
 call: the original function call
 }
 \description{
-Run pulsar stability selection, or other criteria, to select the sparsity of an undirected gaussian
-graphical model.
+Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
+}
+\details{
+The options for \code{criterion} statistics are:
+\itemize{
+   \item stars (Stability approach to regularization selection)
+   \item gcd   (Graphet correlation distance, requires the \pkg{orca} package) see \code{\link{gcvec}}
+   \item diss  (Node-node dissimilarity) see \code{\link{graph.diss}}
+   \item estrada (estrada class) see \code{\link{estrada.class}}
+   \item nc  (natural connectivity) see \code{\link{natural.connectivity}}
+   \item sufficiency (Ravikumar's sufficiency statistic)
+}
 }
 \examples{
 \dontrun{
@@ -81,5 +81,15 @@ out.b <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
                 lb.stars=TRUE, ub.stars=TRUE)
 plot(out.b)
 }
+}
+\references{
+Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv. http://arxiv.org/abs/1605.07072
+
+Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularization selection (stars) for high dimensional graphical models. Proceedings of the Twenty-Third Annual Conference on Neural Information Processing Systems (NIPS).
+
+Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
+}
+\seealso{
+\code{\link{batch.pulsar}}
 }
 

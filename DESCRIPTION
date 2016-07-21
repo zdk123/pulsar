@@ -1,10 +1,10 @@
 Package: pulsar
 Title: Parallel Utilities for Lambda Selection along a Regularization Path
-Version: 0.2.0
+Version: 0.2.3
 Encoding: UTF-8
 Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
-             person("Christian", "M\u00FCller", role = c("ctb"), email="cmueller@simonsfoundation.org"))
-Description: Model selection for arbitrary, L1-regularized graphical models by the Stability Approach to Regularization Selection (StARS), with options for speedups, parallelization, and alternate metrics (notably, graphlet stability).
+             person("Christian", "M\u00FCller", role = c("aut", "ctb"), email="cmueller@simonsfoundation.org"))
+Description: Model selection for L1-regularized graphical models using the Stability Approach to Regularization Selection (StARS), with options for speedups, parallelization, and alternate metrics (notably, graphlet stability).
 URL: http://github.com/zdk123/pulsar, http://arxiv.org/abs/1605.07072
 BugReports: http://github.com/zdk123/pulsar/issues
 Depends:
@@ -15,11 +15,16 @@ Suggests:
     QUIC,
     orca,
     BatchJobs,
-    testthat
+    network,
+    testthat,
+    knitr,
+    rmarkdown
 Imports:
     methods,
+    parallel,
     graphics,
     stats,
     utils,
     Matrix
 RoxygenNote: 5.0.1
+VignetteBuilder: knitr

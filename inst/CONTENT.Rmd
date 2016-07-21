@@ -1,8 +1,3 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
-
-
-
 Table of Contents
 =================
 
@@ -65,8 +60,7 @@ Please see the paper preprint on [arXiv](http://arxiv.org/abs/1605.07072).
 Installation of the current development version of pulsar requires the devtools package. Also we
 recommend some other packages for installation as needed (such as `huge`).
 
-
-```r
+```{r, eval=FALSE}
 library(devtools)
 install_github("zdk123/pulsar")
 library(pulsar)
@@ -76,8 +70,7 @@ library(pulsar)
 
 For this readme, we will use synthetic data, generated from the `huge` package.
 
-
-```r
+```{r, eval=pulsarchunks, message=FALSE}
 library(huge)
 set.seed(10010)
 p <- 40 ; n <- 1200
@@ -91,8 +84,7 @@ first and then refit using arguments stored in the original call. Remove the `se
 real data (this seeds the pseudo-random number generator to fix subsampling for reproducing test
 code).
 
-
-```r
+```{r, eval=pulsarchunks, message=FALSE}
 hugeargs <- list(lambda=lams, verbose=FALSE)
 time1    <- system.time(
 out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, 
@@ -102,28 +94,15 @@ fit.p    <- refit(out.p)
 ```
 
 Inspect the output:
-
-```r
+```{r, eval=TRUE, message=FALSE}
 out.p
-# Mode: serial
-# Path length: 40 
-# Subsamples:  20 
-# Graph dim:   40 
-# Criterion:
-#   stars... opt: index 15, lambda 0.132
 fit.p
-# Pulsar-selected refit of huge 
-# Path length: 40 
-# Graph dim:   40 
-# Criterion:
-#   stars... sparsity 0.0325
 ```
 
 Including the lower bound option `lb.stars` and upper bound option `ub.stars` can improve runtime
 for same StARS result.
 
-
-```r
+```{r, eval=pulsarchunks}
 time2 <- system.time(
 out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
                 lb.stars=TRUE, ub.stars=TRUE, seed=10010))
@@ -131,12 +110,9 @@ out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars
 
 Compare runtimes and StARS selected lambda index for each method.
 
-
-```r
+```{r, eval=TRUE}
 time2[[3]] < time1[[3]]
-# [1] TRUE
 opt.index(out.p, 'stars') == opt.index(out.b, 'stars')
-# [1] TRUE
 ```
 
 ## Using a custom graphical model method
@@ -148,8 +124,7 @@ The output should be a list of adjacency matrices (which can be of sparse repres
 `Matrix` package to save memory).
 Here is an example from `QUIC`.
 
-
-```r
+```{r, eval=pulsarchunks}
 library(QUIC)
 quicr <- function(data, lambda) {
     S    <- cov(data)
@@ -165,8 +140,7 @@ quicr <- function(data, lambda) {
 
 We can use pulsar with a similar call. We can also parallelize this a bit for multi-processor
 machines by specifying ncores (which wraps mclapply in the parallel package).
-
-```r
+```{r, eval=pulsarchunks}
 quicargs <- list(lambda=lams)
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
                 lb.stars=TRUE, ub.stars=TRUE, ncores=2, seed=10010)
@@ -179,8 +153,7 @@ pulsar again with a new criterion, or simply `update` the arguments for model we
 we can use our default approach for selecting the optimal index, based on the gcd+StARS criterion:
 choose the minimum gcd summary statistic between the upper and lower StARS bouds.
 
-
-```r
+```{r, eval=pulsarchunks}
 out.q2 <- update(out.q, criterion=c('stars', 'gcd'))
 opt.index(out.q2, 'gcd') <- get.opt.index(out.q2, 'gcd')
 fit.q2 <- refit(out.q2)
@@ -188,18 +161,13 @@ fit.q2 <- refit(out.q2)
 
 Compare model error by relative hamming distances between refit adjacency matrices and the true
 graph and visualize the results:
-
-```r
+```{r, eval=TRUE, fig.width=12, fig.height=6, message=FALSE}
 plot(out.q2, scale=TRUE)
 ```
-
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/xcQiX4r.png)
-
-```r
+```{r, eval=TRUE, fig.width=18, fig.height=6, message=FALSE}
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
 gcderr   <- sum(fit.q2$refit$gcd   != dat$theta)/p^2
 gcderr < starserr
-# [1] TRUE
 
 ## install.packages('network')
 library(network)
@@ -211,8 +179,6 @@ coords <- plot(truenet, usearrows=FALSE, main="TRUE")
 plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
-
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/xfLSGhk.png)
 
 ## Batch Mode
 
@@ -247,8 +213,7 @@ creating templates for other systems.
 For this README I suggest using BatchJobs's convenient serial mode to get things up and running. 
 Download the files in a browser (if https is not supported) or directly in an R session:
 
-
-```r
+```{r, eval=getconfig}
 url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
 url <- paste(url, "BatchJobsSerialTest.R", sep="/") # Serial mode
 download.file(url, destfile=".BatchJobs.R")
@@ -258,8 +223,7 @@ Since BatchJobs is not imported by `pulsar`, it needs to be loaded.
 Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
 multiple times).
 
-
-```r
+```{r, eval=pulsarchunks, message=FALSE}
 ## uncomment below if BatchJobs is not already installed
 # install.packages('BatchJobs')
 library(BatchJobs)
@@ -267,15 +231,12 @@ out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010
                           #, cleanup=TRUE
                          )
-# Error in knit("README.Rmd"): Assertion on 'conffile' failed: File does not exist: '.BatchJobs.R'.
 ```
 
 Check that we get the same result from batch mode pulsar:
 
-
-```r
+```{r, eval=TRUE, message=FALSE}
 opt.index(out.q, 'stars') == opt.index(out.batch, 'stars')
-# [1] TRUE
 ```
 
 It is also possible to run bounded-mode stars in batch, but the first 2 subsamples (2 jobs) will run
@@ -289,19 +250,15 @@ To keep the initial N=2 jobs separate from the rest, the string provided to the 
 but named `init.reg` and `init.id` from `batch.pulsar`.
 
 
-
-```r
+```{r, eval=pulsarchunks, message=FALSE}
 out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
                      lb.stars=TRUE, ub.stars=TRUE)
-# Error in knit("README.Rmd"): Assertion on 'conffile' failed: File does not exist: '.BatchJobs.R'.
 ```
 
 Check that we get the same result from bounded/batch mode pulsar:
 
-
-```r
+```{r, eval=TRUE, message=FALSE}
 opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
-# [1] TRUE
 ```
 
 ### Notes on batch mode
@@ -335,8 +292,7 @@ lambda that mimimizes the variance of the estimated diss (computed by `pulsar`) 
 of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that has the maximum
 agglomerative coefficient over the path.
 
-
-```r
+```{r, eval=pulsarchunks, warning=FALSE, message=FALSE}
 out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='diss', seed=10010, ncores=2)
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
@@ -356,13 +312,10 @@ fit.diss <-refit(out.diss)
 ```
 
 Evalue the edge-wide model error:
-
-```r
+```{r, eval=TRUE, warning=FALSE, message=FALSE}
 aagneserr <- sum(fit.diss$refit$diss != dat$theta)/p^2
 aagneserr < starserr
-# [1] TRUE
 aagneserr < gcderr
-# [1] FALSE
 ```
 
 Other criteria that are currently implemented are [natural connectivity](http://iopscience.iop.org/0256-307X/27/7/078902)

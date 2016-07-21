@@ -1,0 +1,22 @@
+---
+title: "Graphical model selection with pulsar"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Graphical model selection with pulsar}
+  %\VignetteEngine{knitr::rmarkdown}
+
+  \usepackage[utf8]{inputenc}
+---
+
+```{r, echo = FALSE, eval=TRUE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#"
+)
+library(pulsar)
+pulsarchunks = TRUE
+getconfig    = TRUE
+```
+
+```{r, child=file.path(system.file(package="pulsar"), "CONTENT.Rmd"), out.width="680px"}
+```

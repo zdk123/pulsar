@@ -23,15 +23,21 @@ getArgs <- function(call, envir=parent.frame()) {
 }
 
 
-#' Get or evaluate optimal index
+#' Get or evaluate an optimal index
 #'
 #' If the optimal index for the lambda path is not already assigned, then use a validated method to 
-#' select the optimal index of the lambda path for alternate criteria  (i.e. except for StARS).
-#' Currently only implemented for \code{gcd} (graphlet stability).
+#' select the optimal index of the lambda path for alternate criteria  (i.e. other than StARS).
 #'
 #' @param obj the pulsar/batch.pulsar object to evaluate
 #' @param criterion a character argument for the desired summary criterion
-#' @param ... currently ignored
+#' @param ... Ignored
+#' @details Automated optimal index selection is [currently] only implemented for \code{gcd} (graphlet stability).
+#'
+#' Criterion:
+#' \itemize{
+#'  \item gcd: Select the mimimum gcd summary score within the lower and upper StARS bounds.
+#' }
+#' @seealso \code{\link{opt.index}}
 #' @export
 get.opt.index <- function(obj, criterion="gcd", ...) {
     optind <- opt.index(obj, criterion)
@@ -47,12 +53,13 @@ get.opt.index <- function(obj, criterion="gcd", ...) {
     }
 }
 
-#' The optimal index
+#' Optimal index
 #'
 #' Get or set the optimal index of the lambda path, as determined by a given criterion. \code{value} must be a numeric/int.
 #'
 #' @param obj a pulsar or batch.pulsar object
 #' @param criterion a summary statistic criterion for lambda selection
+#' @seealso \code{\link{get.opt.index}}
 #' @export
 opt.index <- function(obj, criterion='stars') {
     .pcheck(obj)
@@ -62,6 +69,7 @@ opt.index <- function(obj, criterion='stars') {
 
 #' @param value Integer index for optimal lambda by criterion
 #' @rdname opt.index
+#' @export
 "opt.index<-" <- function(obj, criterion='stars', value) {
     .pcheck(obj)
     fin <- getArgs(obj$call, obj$envir)
@@ -75,7 +83,7 @@ opt.index <- function(obj, criterion='stars') {
 
 #' Lambda path
 #'
-#' Generate a lambda path sequence in descending order, equally or log spaced.
+#' Generate a lambda path sequence in descending order, equally or log-spaced.
 #'
 #' @param max numeric, maximum lambda value
 #' @param min numeric, minimum lambda value
@@ -86,7 +94,7 @@ opt.index <- function(obj, criterion='stars') {
 #' ## Generate the data with huge:
 #' library(huge)
 #' set.seed(10010)
-#' p <- 40 ; n <- 1200
+#' p <- 40 ; n <- 100
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 #'
 #' ## Theoretical lamda max is the maximum abs value of the empirical covariance matrix
@@ -105,6 +113,7 @@ getLamPath <- function(max, min, len, log=FALSE) {
 #' Max absolute value of cov matrix
 #'
 #' Get the maximum absolute value of a covariance matrix.
+#'
 #' @param x A matrix/Matrix of data or covariance
 #' @param cov Flag if \code{x} is a covariance matrix, Set False is \code{x} is an nxp data matrix. By default, if \code{x} is symmetric, assume it is a covariance matrix.
 #' @param diag Flag to include diagonal entries in the max

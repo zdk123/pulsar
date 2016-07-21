@@ -2,13 +2,13 @@
 #' 
 #' Run the supplied graphical model function on the whole dataset and refit with the selected lambda(s)
 #'
-#' @param obj a \code{pulsar} or \code{batch.pulsar} object
-#' @param criterion a vector of criteria for refitting on full data. An optimal index must be defined for each or a warning will result.
-#' @return an S3 \code{pulsar.refit} object with members:
+#' @param obj a fitted \code{pulsar} or \code{batch.pulsar} object
+#' @param criterion a vector of criteria for refitting on full data. An optimal index must be defined for each or a warning will result. If missing (no argument is supplied), try to refit all criterion.
+#' @return a \code{pulsar.refit} S3 object with members:
 #' \itemize{
-#'   \item est: the raw output from the graphical model function (what was used to generate \code{obj}) but applied to the full dataset.
-#'   \item refit: a named list of adjacency matrices, for each optimal criterion in \code{obj} or specified in the \code{criterion} argument
-#'   \item fun: the original function for estimating the graphical model
+#'   \item est: the raw output from the graphical model function, \code{fun}, applied to the full dataset.
+#'   \item refit: a named list of adjacency matrices, for each optimal criterion in \code{obj} or specified in the \code{criterion} argument.
+#'   \item fun: the original function used to estimate the graphical model along the lambda path.
 #'}
 #' @examples
 #'
@@ -18,7 +18,7 @@
 #' set.seed(10010)
 #' p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-#' lams  <- getLamPath(.2, .01, len=40)
+#' lams  <- getLamPath(getMaxCov(dat$data), .01, len=40)
 #' 
 #' ## Run pulsar with huge
 #' hugeargs <- list(lambda=lams, verbose=FALSE)

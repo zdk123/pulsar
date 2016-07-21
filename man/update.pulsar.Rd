@@ -7,16 +7,19 @@
 \method{update}{pulsar}(object, ..., evaluate = TRUE)
 }
 \arguments{
-\item{object}{a pulsar or batch.pulsar object}
+\item{object}{a n existing pulsar or batch.pulsar object}
 
 \item{...}{arguments to \code{pulsar} to update}
 
-\item{evaluate}{Flag to evaluate the function. If FALSE, the updated call is returned without evaluation}
+\item{evaluate}{Flag to evaluate the function. If \code{FALSE}, the updated call is returned without evaluation}
 }
 \value{
-the same output as \code{pulsar} or \code{batch.pulsar}
+If \code{evaluate = TRUE}, the fitted object - the same output as \code{pulsar} or \code{batch.pulsar}. Otherwise, the updated call.
 }
 \description{
-Update and re-fit a model, with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
+Update a pulsar model with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
+}
+\seealso{
+\code{eval}, \code{\link{update}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 }
 

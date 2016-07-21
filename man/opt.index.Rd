@@ -3,7 +3,7 @@
 \name{opt.index}
 \alias{opt.index}
 \alias{opt.index<-}
-\title{The optimal index}
+\title{Optimal index}
 \usage{
 opt.index(obj, criterion = "stars")
 
@@ -18,5 +18,8 @@ opt.index(obj, criterion = "stars") <- value
 }
 \description{
 Get or set the optimal index of the lambda path, as determined by a given criterion. \code{value} must be a numeric/int.
+}
+\seealso{
+\code{\link{get.opt.index}}
 }
 

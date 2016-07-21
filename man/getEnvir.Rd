@@ -10,9 +10,12 @@ getEnvir(x)
 \method{getEnvir}{default}(x)
 }
 \arguments{
-\item{x}{S3 object to extract the ennvironment}
+\item{x}{S3 object to extract the environment}
 }
 \description{
-Generic function for extracting an environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+Generic S3 method for extracting an environment from an S3 object. A getter for an explicitly stored environment from an S3 object or list... probably the environment where the original function that created the object was called from. The default method is a wrapper for \code{x$envir}.
+}
+\seealso{
+\code{getCall}, \code{environment}, \code{parent.env}, \code{eval}
 }
 

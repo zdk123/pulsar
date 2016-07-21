@@ -14,25 +14,21 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
 
-\item{fun}{pass in a function that returns a list of \eqn{p*p} graphical models along the desired regularization path. The expected inputs to this function are based on the \code{huge} function in the \pkg{huge} package: a raw data input (as opposed to a covariance/correlation matrix) and must return a list or S3 object with a \emph{named} \code{path} list. This should be a list of matrices (or preferable sparse Matrix - see the \pkg{Matrix} package) of adjacency matrices without weights or signs representing the undirected graphical model at each value of \code{lambda}. See details for more information.}
+\item{fun}{pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.}
 
 \item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.}
 
-\item{criterion}{a character vector of selection statistics. Multiple criteria can be supplied. By default, StARS is run. Currently, there are no selection criterion available for summary statistics, aside for stars, so the entire path and summary is returned. The options are:
-\itemize{
-   \item stars (Stability approach to regularization selection)
-   \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
-}}
+\item{criterion}{A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.}
 
-\item{thresh}{threshold for selection criterion. Only implemented for StARS. thresh = 0.1 is recommended.}
+\item{thresh}{threshold for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.}
 
 \item{subsample.ratio}{determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.}
 
-\item{lb.stars}{Should the lower bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
+\item{lb.stars}{Should the lower bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
 
-\item{ub.stars}{Should the upper bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
+\item{ub.stars}{Should the upper bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
-\item{rep.num}{number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended if using other summary metrics or if using edge frequencies as confidence scores.}
+\item{rep.num}{number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.}
 
 \item{seed}{A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.}
 
@@ -44,7 +40,7 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{conffile}{path to BatchJobs configuration file}
 
-\item{job.res}{named list of resources needed for each job (e.g. for intermediate PBS script). The format and members depends on configuation and template.}
+\item{job.res}{named list of resources needed for each job (e.g. for intermediate PBS script). The format and members depends on configuation and template. See examples section for a Torque example}
 
 \item{progressbars}{Flag to show various BatchJobs progress bars. Set FALSE for less output.}
 
@@ -56,23 +52,29 @@ an S3 object of class \code{pulsar} with a named member for each stability metri
    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
    \item criterion: the stability criterion used
    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-   \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \emph{0} if no optimum is found or if selection for the criterion is not implemented.
+   \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
   }
 If \code{stars} is included as a criterion then additional arguments include
 \itemize{
-   \item lb.index the lambda index of the lower bound at N=2 samples if \code{lb.stars} flag is set to TRUE
-   \item ub.index the lambda index of the upper bound at N=2 samples if \code{ub.stars} flag is set to TRUE
+   \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
+   \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 }
 
-reg Registry object. See \code{BatchJobs::makeRegistry}
+reg: Registry object. See \code{BatchJobs::makeRegistry}
 
-id Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
+id: Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
 
 call: the original function call
 }
 \description{
-Run pulsar stability selection, or other criteria, in batch mode to select the sparsity of an undirected gaussian
-graphical model.
+Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
+}
+\details{
+The options for \code{criterion} statistics are:
+\itemize{
+   \item stars (Stability approach to regularization selection)
+   \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
+}
 }
 \examples{
 \dontrun{
@@ -83,16 +85,32 @@ p <- 40 ; n <- 1200
 dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 lams  <- getLamPath(.2, .01, len=40)
 
-## Run pulsar with huge
-hugeargs <- list(lambda=lams, verbose=FALSE)
-out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
-                rep.num=20, criterion='stars')
+## Run batch.pulsar on a Torque cluster
 
-## Run pulsar in bounded stars mode and include gcd metric:
-out.b <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
-                rep.num=20, criterion=c('stars', 'gcd'),
-                lb.stars=TRUE, ub.stars=TRUE)
-plot(out.b)
+## Get example template and config files
+url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
+download.file(paste(url, "BatchJobsTorque.R", sep="/"), destfile=".BatchJobs.R")
+download.file(paste(url, "simpletorque.tml", sep="/"),  destfile="simpletorque.tml")
+
+## Give each job 1gb of memory and a limit of 30 minutes
+resources <- list(memory="1GB", nodes="1", walltime="00:30:00")
+hugeargs  <- list(lambda=lams, verbose=FALSE)
+out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+                      rep.num=100, criterion=c('stars', 'gcd'),
+                      job.res=resources, regdir=file.path(getwd(), "testtorq"))
+plot(out.p)
 }
+}
+\references{
+Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv http://arxiv.org/abs/1605.07072
+
+Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularization selection (stars) for high dimensional graphical models. Proceedings of the Twenty-Third Annual Conference on Neural Information Processing Systems (NIPS).
+
+Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
+
+Bischl, B., Lang, M., Mersmann, O., Rahnenführer, J., & Weihs, C. (2015). BatchJobs and BatchExperiments : Abstraction Mechanisms for Using R in Batch Environments. Journal of Statistical Software, 64(11), 1–25. doi:10.18637/jss.v064.i11
+}
+\seealso{
+\code{\link{pulsar}}
 }
 

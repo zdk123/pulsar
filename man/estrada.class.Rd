@@ -2,20 +2,20 @@
 % Please edit documentation in R/graphFeatures.R
 \name{estrada.class}
 \alias{estrada.class}
-\title{Estrada class of a graph}
+\title{Estrada class}
 \usage{
-estrada.class(Graph, evthresh = 0.001)
+estrada.class(G, evthresh = 0.001)
 }
 \arguments{
-\item{Graph}{pxp adjacency matrix for a graph}
+\item{G}{a \eqn{p*p} adjacency matrix of a Graph}
 
 \item{evthresh}{tolerance for a zero eigenvalue}
 }
 \value{
-Estrada index (1-4)
+Estrada index (\eqn{1-4})
 }
 \description{
-Estrada proposes that graphs can be classified in 1 of 4 classes. We call this the Estrada index.
+Estrada proposes that Graphs can be classified in 1 of 4 classes. We call this the Estrada index.
 These are:
   I. Expander
  II. Cluster

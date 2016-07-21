@@ -1,6 +1,6 @@
 context("graph features")
 
-p <- 50
+p <- 20
 # generate synthetic graph
 G <- huge::huge.generator(p*2, p, "random", verbose=FALSE)$theta
 

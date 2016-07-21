@@ -9,29 +9,24 @@
 #' @details This function creates a random path intended for temporary directories. E.g. for testing pulsar's batch mode. This function is useful if you need a safe place to store (and delete) files without endangering important directories or R's per session tmp directory, given by \code{tempdir}, which may be needed for other uses.
 
 #' @return a character vector representing a file path for a randomly generated directory.
+#' @seealso batch.pulsar
 #' @export
 getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
     file.path(base, 
-        paste("Rtmp", toupper(paste(sample(letters, len, replace=TRUE), collapse="")), sep=""),
-        fsep=fsep)
+        paste("Rtmp", toupper(paste(sample(letters, len, replace=TRUE), collapse="")), 
+              sep=""), fsep=fsep)
 }
 
 
 #' pulsar: batch mode
 #'
-#' Run pulsar stability selection, or other criteria, in batch mode to select the sparsity of an undirected gaussian
-#' graphical model. 
+#' Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
 #'
-#' @param criterion a character vector of selection statistics. Multiple criteria can be supplied. By default, StARS is run. Currently, there are no selection criterion available for summary statistics, aside for stars, so the entire path and summary is returned. The options are:
-#' \itemize{
-#'    \item stars (Stability approach to regularization selection)
-#'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
-#' }
 #' @param regdir directory to store intermediate batch job files
 #' @param regid text string representing a unique registry ID for your project
 #' @param init text string appended to basename of regdir to store the batch jobs for the initial StARS variability estimate
 #' @param conffile path to BatchJobs configuration file
-#' @param job.res named list of resources needed for each job (e.g. for intermediate PBS script). The format and members depends on configuation and template.
+#' @param job.res named list of resources needed for each job (e.g. for intermediate PBS script). The format and members depends on configuation and template. See examples section for a Torque example
 #' @param progressbars Flag to show various BatchJobs progress bars. Set FALSE for less output.
 #' @param cleanup Flag for removing BatchJob registry files. Recommended FALSE unless you're sure indetermediate data shouldn't be saved.
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -39,16 +34,22 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #'    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
 #'    \item criterion: the stability criterion used
 #'    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \emph{0} if no optimum is found or if selection for the criterion is not implemented.
+#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
 #'   }
 #' If \code{stars} is included as a criterion then additional arguments include
 #' \itemize{
-#'    \item lb.index the lambda index of the lower bound at N=2 samples if \code{lb.stars} flag is set to TRUE
-#'    \item ub.index the lambda index of the upper bound at N=2 samples if \code{ub.stars} flag is set to TRUE
+#'    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
+#'    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 #'}
-#' @return reg Registry object. See \code{BatchJobs::makeRegistry}
-#' @return id Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
+#' @return reg: Registry object. See \code{BatchJobs::makeRegistry}
+#' @return id: Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
 #' @return call: the original function call
+#' @details 
+#' The options for \code{criterion} statistics are:
+#' \itemize{
+#'    \item stars (Stability approach to regularization selection)
+#'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
+#' }
 #' @examples
 #' \dontrun{
 #' ## Generate the data with huge:
@@ -57,53 +58,45 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #' p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 #' lams  <- getLamPath(.2, .01, len=40)
-#' 
-#' ## Run pulsar with huge
-#' hugeargs <- list(lambda=lams, verbose=FALSE)
-#' out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
-#'                 rep.num=20, criterion='stars')
 #'
-#' ## Run pulsar in bounded stars mode and include gcd metric:
-#' out.b <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
-#'                 rep.num=20, criterion=c('stars', 'gcd'),
-#'                 lb.stars=TRUE, ub.stars=TRUE)
-#' plot(out.b)
+#' ## Run batch.pulsar on a Torque cluster
+#'
+#' ## Get example template and config files
+#' url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
+#' download.file(paste(url, "BatchJobsTorque.R", sep="/"), destfile=".BatchJobs.R")
+#' download.file(paste(url, "simpletorque.tml", sep="/"),  destfile="simpletorque.tml")
+#'
+#' ## Give each job 1gb of memory and a limit of 30 minutes
+#' resources <- list(memory="1GB", nodes="1", walltime="00:30:00")
+#' hugeargs  <- list(lambda=lams, verbose=FALSE)
+#' out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+#'                       rep.num=100, criterion=c('stars', 'gcd'),
+#'                       job.res=resources, regdir=file.path(getwd(), "testtorq"))
+#' plot(out.p)
 #' }
+#' @references Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv http://arxiv.org/abs/1605.07072
+#' @references Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularization selection (stars) for high dimensional graphical models. Proceedings of the Twenty-Third Annual Conference on Neural Information Processing Systems (NIPS).
+#' @references Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
+#' @references Bischl, B., Lang, M., Mersmann, O., Rahnenführer, J., & Weihs, C. (2015). BatchJobs and BatchExperiments : Abstraction Mechanisms for Using R in Batch Environments. Journal of Statistical Software, 64(11), 1–25. doi:10.18637/jss.v064.i11
 #' @inheritParams pulsar
 #' @importFrom Matrix mean triu
+#' @seealso \code{\link{pulsar}}
 #' @export
-batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
-                            thresh = 0.1, subsample.ratio = NULL, lb.stars=FALSE, ub.stars=FALSE,
-                            rep.num = 20, seed=NULL, regdir=getTempDir(), regid=basename(regdir), 
-                            init="subtwo", conffile = ".BatchJobs.R", job.res=list(), 
-                            progressbars=TRUE, cleanup=FALSE)  {
+batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thresh = 0.1,
+                         subsample.ratio = NULL, lb.stars=FALSE, ub.stars=FALSE, rep.num = 20,
+                         seed=NULL, regdir=getTempDir(), regid=basename(regdir), init="subtwo",
+                         conffile = ".BatchJobs.R", job.res=list(), progressbars=TRUE, cleanup=FALSE) {
     gcinfo(FALSE)
     if (file.exists(regdir)) stop('Registry directory already exists')
     n <- nrow(data)
     p <- ncol(data)
     # min requirements for function args
-    if (is.null(fargs$lambda)) {
-        stop(paste('Error: missing members in fargs:', 
-             paste(c('lambda')[c(is.null(fargs$lambda))])))
-    } else {
-        if (!all(fargs$lambda == cummin(fargs$lambda)))
-            warning("Are you sure you don't want the lambda path to be monotonically decreasing")
-        if (length(fargs$lambda) < 2)
-            warning("Only 1 value of lambda is given. Are you sure you want to do model selection?")
-    }
+    knowncrits <- c("stars", "gcd")
+    .lamcheck(fargs$lambda)
+    .critcheck0(criterion, knowncrits)
+    subsample.ratio <- .ratcheck(subsample.ratio, n)
     nlams <- length(fargs$lambda)
 
-    knowncrits <- c("stars", "gcd")
-    if (!all(criterion %in% knowncrits)) {
-       stop(paste('Error: unknown criterion', paste(criterion[!(criterion %in% knowncrits)], 
-                   collapse=", "), sep=": "))
-    }
-    if (is.null(subsample.ratio)) {
-        if (n > 144)
-            subsample.ratio = 10 * sqrt(n)/n
-        if (n <= 144)
-            subsample.ratio = 0.8
-    }
     if (!is.null(seed)) set.seed(seed)
     ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio),
                     replace = FALSE), simplify=FALSE)
@@ -111,7 +104,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
 
     estFun <- function(ind.sample, fargs, data, fun) {
         tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
-        if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member') 
+        if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member')
         return(tmp$path)
     }
 
@@ -127,7 +120,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         minN <- rep.num
 
     isamp <- ind.sample[1:minN]
-    out <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res, 
+    out <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res,
                     progressbar=progressbars)
     reg <- out$reg ; id  <- out$id
 
@@ -136,15 +129,14 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         est$init.reg <- reg ; est$init.id  <- id
 
         doneRun <- BatchJobs::waitForJobs(reg, id, progressbar=progressbars)
-        if (!doneRun) {
+        if (!doneRun)
             stop('Errors in batch jobs for computing initial stability')
-        }
+
         # collect initial results
         lb.starsmerge <- BatchJobs::reduceResults(reg, progressbar=progressbars, 
                          fun=function(job, res, aggr) 
                              lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]]))
         lb.est <- stars.stability(NULL, thresh, minN, p, lb.starsmerge)
-
         # compute initial gcd if selected
         if ('gcd' %in% criterion) {
             aggfun <- function(job, res) lapply(res, gcvec)
@@ -154,8 +146,8 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         }
         if (cleanup) unlink(regdir, recursive=TRUE)
         if (lb.est$opt.index == 1)
-            warning("Accurate lower bound could not be determine with N=2 subsamples")
-
+            warning("Accurate lower bound could not be determined with N=2 subsamples")
+        lb.est$opt.index <- lb.est$opt.index + 1 ## adjust
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
             pmean <- pmin(sapply(lb.est$merge, function(x) {
@@ -203,7 +195,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
       if (crit == "stars") {
          # Reduce results, include init estimate from N=2 if lb/ub is used
          starsaggfun <- function(job, res, aggr) lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]])
-         starsmerge <- do.call(BatchJobs::reduceResults, 
+         starsmerge <- do.call(BatchJobs::reduceResults,
                          c(list(reg=reg, fun=starsaggfun, progressbar=progressbars), reduceargs))
          est$stars <- stars.stability(NULL, thresh, rep.num, p, starsmerge)
      }
@@ -229,6 +221,10 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
       tmpsumm[pind]  <- est$stars$summary
       est$stars$summary <- tmpsumm
 
+      est$stars$opt.index <- if (ub.index > 1) .starsind(tmpsumm[-(1:(ub.index-1))], thresh) + ub.index - 1
+                             else .starsind(tmpsumm, thresh)
+
+
       tmpmerg <- vector('list', length(lb.est$summary))
       tmpmerg[p2ind] <- lb.est$merge[p2ind]
       tmpmerg[pind]  <- est$stars$merge
@@ -236,7 +232,6 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
 
       est$stars$lb.index <- lb.est$opt.index
       est$stars$ub.index <- ub.index
-      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
     }
 
     if (cleanup) unlink(regdir, recursive=TRUE)

@@ -7,14 +7,14 @@
 graph.diss(G, sim = FALSE, loops = FALSE)
 }
 \arguments{
-\item{G}{adjacency matrix (dense or sparse) of a graph.}
+\item{G}{a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.}
 
-\item{sim}{bool: return Graph similarity instead (which is just 1-dissimilarity)}
+\item{sim}{Flag to return Graph similarity instead (1-dissimilarity)}
 
-\item{loops}{bool: should self loops be considered}
+\item{loops}{Flag to consider self loops}
 }
 \value{
-a pxp dissimilarity matrix
+a \eqn{p*p} dissimilarity matrix
 }
 \description{
 Dissimilarity matrix of a graph is here defined as the number of shared neighbors any two nodes.

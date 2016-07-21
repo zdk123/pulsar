@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{get.opt.index}
 \alias{get.opt.index}
-\title{Get or evaluate optimal index}
+\title{Get or evaluate an optimal index}
 \usage{
 get.opt.index(obj, criterion = "gcd", ...)
 }
@@ -11,11 +11,21 @@ get.opt.index(obj, criterion = "gcd", ...)
 
 \item{criterion}{a character argument for the desired summary criterion}
 
-\item{...}{currently ignored}
+\item{...}{Ignored}
 }
 \description{
 If the optimal index for the lambda path is not already assigned, then use a validated method to 
-select the optimal index of the lambda path for alternate criteria  (i.e. except for StARS).
-Currently only implemented for \code{gcd} (graphlet stability).
+select the optimal index of the lambda path for alternate criteria  (i.e. other than StARS).
+}
+\details{
+Automated optimal index selection is [currently] only implemented for \code{gcd} (graphlet stability).
+
+Criterion:
+\itemize{
+ \item gcd: Select the mimimum gcd summary score within the lower and upper StARS bounds.
+}
+}
+\seealso{
+\code{\link{opt.index}}
 }
 

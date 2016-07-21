@@ -22,4 +22,7 @@ Generate a string to create a random temporary directory, in a platform indepden
 \details{
 This function creates a random path intended for temporary directories. E.g. for testing pulsar's batch mode. This function is useful if you need a safe place to store (and delete) files without endangering important directories or R's per session tmp directory, given by \code{tempdir}, which may be needed for other uses.
 }
+\seealso{
+batch.pulsar
+}
 

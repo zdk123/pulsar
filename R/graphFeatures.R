@@ -7,11 +7,11 @@
 #'
 #' Dissimilarity matrix of a graph is here defined as the number of shared neighbors any two nodes.
 #'
-#' @param G adjacency matrix (dense or sparse) of a graph.
-#' @param sim bool: return Graph similarity instead (which is just 1-dissimilarity)
-#' @param loops bool: should self loops be considered
+#' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.
+#' @param sim Flag to return Graph similarity instead (1-dissimilarity)
+#' @param loops Flag to consider self loops
 #'
-#' @return a pxp dissimilarity matrix
+#' @return a \eqn{p*p} dissimilarity matrix
 #' @references Bochkina, N. (2015). Selection of the Regularization Parameter in Graphical Models using a Priori Knowledge of Network Structure, arXiv: 1509.05326.
 #' @export
 graph.diss <- function(G, sim=FALSE, loops=FALSE) {
@@ -39,8 +39,8 @@ GraphDiss2 <- function(G) {
 #'
 #' Compute the natural connectivity of a graph
 #' 
-#' @param G adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given
-#' @param eig precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for G.
+#' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given
+#' @param eig precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for \code{G}.
 #' @param norm should the natural connectivity score be normalized
 #'
 #' @details The natural connectivity of a graph is a useful robustness measure of complex networks, corresponding to the average eigenvalue of the adjacency matrix. 
@@ -48,8 +48,6 @@ GraphDiss2 <- function(G) {
 #' @references Jun, W., Barahona, M., Yue-Jin, T., & Hong-Zhong, D. (2010). Natural Connectivity of Complex Networks. Chinese Physics Letters, 27(7), 78902. doi:10.1088/0256-307X/27/7/078902
 #' @export
 natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
-## eigs -> precomputed eigendecomp
-
   if (is.null(eig)) {
 #    arploaded <- tryCatch(library(rARPACK), error=function(e) FALSE)
 #    if (!arploaded) {
@@ -59,10 +57,8 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 #      eig <- eigs_sym(G, k=ncol(G))
 #    }
   }
-
   estrind <- exp(eig$values)
   nc <- log(mean(estrind))
-  
   if (norm) {
     n <- length(estrind)
     nc <- nc / (n - log(n))
@@ -70,12 +66,13 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   return(nc)
 }
 
-.tnorm <- function(x) {
-#   xs <- sum(x+1)
-#   (x+1)/xs
-  if (all(x==0)) x
-  else x/sum(x)
-}
+### DEPRECATED
+##.tnorm <- function(x) {
+###   xs <- sum(x+1)
+###   (x+1)/xs
+##  if (all(x==0)) x
+##  else x/sum(x)
+##}
 
 
 #egraphletlist <- function(G, norm=TRUE) {
@@ -130,11 +127,24 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 ###  gcor[upper.tri(gcor)] 
 #}
 
+#' @keywords internal
+.adj2elist <- function(G) {
+    if (inherits(G, "sparseMatrix")) {
+        if (!inherits(G, 'symmetricMatrix'))
+            G <- as(G, "symmetricMatrix")
+        return(Matrix::summary(G)[,-3])
+    } else {
+        p <- ncol(G)
+        arrayInd(which(as.logical(triu(G))), c(p,p))
+    }
+}
 
+#' Graphlet correlations vector
+#'
 #' Compute graphlet correlations over the desired orbits for a single graph \code{G}
 #' 
-#' @param G adjacency matrix (dense or sparse) of a graph.
-#' @param orbind index vector for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but index-by-1 is used in this package.
+#' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.
+#' @param orbind index vector for which orbits to use for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but 1 offset needed for R-style indexing.
 #'
 #' @references Hočevar, T., & Demšar, J. (2014). A combinatorial approach to graphlet counting. Bioinformatics (Oxford, England), 30(4), 559–65. doi:10.1093/bioinformatics/btt717
 #' @references Yaveroğlu, Ö. N., Malod-Dognin, N., Davis, D., Levnajic, Z., Janjic, V., Karapandza, R., … Pržulj, N. (2014). Revealing the hidden language of complex networks. Scientific Reports, 4, 4547. doi:10.1038/srep04547
@@ -144,7 +154,7 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 gcvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
   if (length(orbind) < 2) stop("Only one orbit selected, need at least two to calculate graphlet correlations")
   if (any(orbind > 15))   stop("Only 15 orbits, from 4-node graphlets, can be selected")
-  Elist <- Matrix::summary(as(G, 'symmetricMatrix'))[,-3]
+  Elist <- .adj2elist(G)
   n <- length(orbind)
   if (ncol(Elist) < 1 || nrow(Elist) < 1) {
       return(rep(0, n*(n-1)/2))
@@ -194,31 +204,31 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 .SMA <- function(x) ((mean(abs(x))))
 
 
-#' Estrada class of a graph
+#' Estrada class
 #'
-#' Estrada proposes that graphs can be classified in 1 of 4 classes. We call this the Estrada index.
+#' Estrada proposes that Graphs can be classified in 1 of 4 classes. We call this the Estrada index.
 #' These are:
 #'   I. Expander
 #'  II. Cluster
 #' III. Core-Periphery
 #' IV.  Mixed.
-#' @param Graph pxp adjacency matrix for a graph
+#' @param G a \eqn{p*p} adjacency matrix of a Graph
 #' @param evthresh tolerance for a zero eigenvalue
-#' @return Estrada index (1-4)
+#' @return Estrada index (\eqn{1-4})
 #' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 #' @export
-estrada.class <- function(Graph, evthresh=1e-3) {
-  if (class(Graph) != "subgraph.centrality")
-      Graph <- subgraph.centrality(Graph)
+estrada.class <- function(G, evthresh=1e-3) {
+  if (class(G) != "subgraph.centrality")
+      G <- subgraph.centrality(G)
 
-  ev1  <- Graph$evec[,1]
-  eval <- Graph$evals[1]
+  ev1  <- G$evec[,1]
+  eval <- G$evals[1]
 
-  if (length(unique(sign(ev1))) == 1 && Graph$evals[2] > 0) { ## try the second eigen vector
-      ev1  <- Graph$evec[,2]
-      eval <- Graph$evals[2]
+  if (length(unique(sign(ev1))) == 1 && G$evals[2] > 0) { ## try the second eigen vector
+      ev1  <- G$evec[,2]
+      eval <- G$evals[2]
   }
-  subgodd <- Graph$odd
+  subgodd <- G$odd
   Evratio <- pmax(ev1^2 * sinh(eval) / subgodd, evthresh)
   Evratio[is.nan(Evratio)] <- 0
   if (sum(Evratio==evthresh) > (2/3)*length(Evratio)) return(0)

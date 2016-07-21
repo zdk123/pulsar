@@ -2,15 +2,15 @@
 % Please edit documentation in R/generics.R
 \name{plot.pulsar}
 \alias{plot.pulsar}
-\title{Plot a pulsar output}
+\title{Plot a \code{pulsar} S3 object}
 \usage{
 \method{plot}{pulsar}(x, scale = TRUE, invlam = FALSE, loglam = FALSE,
   legends = TRUE, ...)
 }
 \arguments{
-\item{x}{a pulsar or batch.pulsar object}
+\item{x}{a \code{pulsar} or \code{batch.pulsar} object}
 
-\item{scale}{Flag to scale non-StARS criterion to StARS range (or 1)}
+\item{scale}{Flag to scale non-StARS criterion to max StARS value (or 1)}
 
 \item{invlam}{Flag to plot 1/lambda}
 
@@ -18,10 +18,10 @@
 
 \item{legends}{Flag to plot legends}
 
-\item{...}{system reserved usage (ignored)}
+\item{...}{ignored}
 }
 \description{
-Plot a pulsar output
+Plot a \code{pulsar} S3 object
 }
 \details{
 If both invlam and loglam are given, log[1/lambda] is plotted

@@ -17,6 +17,5 @@ bibentry(header="To cite pulsar in publications use:",
   textVersion  =
   paste("M\u00FCller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).",
         "Generalized Stability Approach for Regularized Graphical Models.",
-        "arXiv. Methodology; Molecular Networks; Applications; Computation.",
-        "Retrieved from http://arxiv.org/abs/1605.07072.")
+        "arXiv. Retrieved from http://arxiv.org/abs/1605.07072.")
 )

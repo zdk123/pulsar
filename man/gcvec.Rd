@@ -2,14 +2,14 @@
 % Please edit documentation in R/graphFeatures.R
 \name{gcvec}
 \alias{gcvec}
-\title{Compute graphlet correlations over the desired orbits for a single graph \code{G}}
+\title{Graphlet correlations vector}
 \usage{
 gcvec(G, orbind = c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1) + 1)
 }
 \arguments{
-\item{G}{adjacency matrix (dense or sparse) of a graph.}
+\item{G}{a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.}
 
-\item{orbind}{index vector for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but index-by-1 is used in this package.}
+\item{orbind}{index vector for which orbits to use for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but 1 offset needed for R-style indexing.}
 }
 \description{
 Compute graphlet correlations over the desired orbits for a single graph \code{G}

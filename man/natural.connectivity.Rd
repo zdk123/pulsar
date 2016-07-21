@@ -7,9 +7,9 @@
 natural.connectivity(G, eig = NULL, norm = TRUE)
 }
 \arguments{
-\item{G}{adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given}
+\item{G}{a \eqn{p*p} adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given}
 
-\item{eig}{precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for G.}
+\item{eig}{precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for \code{G}.}
 
 \item{norm}{should the natural connectivity score be normalized}
 }

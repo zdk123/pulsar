@@ -1,4 +1,4 @@
-#' Print S3 object \code{pulsar.refit}
+#' Print a \code{pulsar.refit} S3 object
 #'
 #' Print information about the model, path length, graph dimension, criterion and optimal indices and graph sparsity.
 #'
@@ -23,12 +23,12 @@ print.pulsar.refit <- function(x, ...) {
 }
 
 
-#' Print S3 object \code{pulsar} and \code{batch.pulsar}
+#' Print a \code{pulsar} and \code{batch.pulsar} S3 object
 #'
 #' Print information about the model, path length, graph dimension, criterion and optimal indices, if defined.
 #'
-#' @param x a \code{pulsar} or \code{batch.pulsar} object
-#' @param ... Ignored
+#' @param x a fitted \code{pulsar} or \code{batch.pulsar} object
+#' @param ... ignored
 #' @export
 print.pulsar <- function(x, ...) {
     fin <- getArgs(getCall(x), getEnvir(x))
@@ -60,19 +60,19 @@ print.batch.pulsar <- function(x, ...) {
         optext  <- ifelse(is.null(opt.ind), "",
           paste("... opt: index ", opt.ind, ", lambda ",
           signif(fin$fargs$lambda[opt.ind], 3), sep=""))
-        paste("  ", x[[cr]]$criterion, optext, sep="")
+        paste("  ", cr, optext, sep="")
         })
     cat(critext, "\n", paste(critext2, collapse="\n"), "\n", sep="")
 }
 
-#' Plot a pulsar output
+#' Plot a \code{pulsar} S3 object
 #'
-#' @param x a pulsar or batch.pulsar object
-#' @param scale Flag to scale non-StARS criterion to StARS range (or 1)
+#' @param x a \code{pulsar} or \code{batch.pulsar} object
+#' @param scale Flag to scale non-StARS criterion to max StARS value (or 1)
 #' @param invlam Flag to plot 1/lambda
 #' @param loglam Flag to plot log[lambda]
 #' @param legends Flag to plot legends
-#' @param ... system reserved usage (ignored)
+#' @param ... ignored
 #' 
 #' @details If both invlam and loglam are given, log[1/lambda] is plotted
 #' @export
@@ -88,7 +88,7 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
     xlab <- "lambda"
     if (invlam) {lams <- 1/lams ; xlab <- paste("1/", xlab, sep="")}
     if (loglam) {lams <- log(lams) ; xlab <- paste("log[ ", xlab, " ]", sep="")}
-    
+
     nlam  <- length(lams)
     crits <- fin$criterion
     n     <- length(crits)
@@ -125,7 +125,7 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
     for (cr in crits) {
         summs <- x[[ cr ]]$summary
         optind <- opt.index(x, cr)
-        if (scale && cr != "stars") summs <- (summs/max(summs))*ymax
+        if (scale && cr != "stars") summs <- ymax*summs/max(summs)
         if (length(summs) == nlam) {
             points(lams[range],  summs[range],  type='b', col=lcol)
             points(lams[range1], summs[range1], type='b', col=lcol, lty=2)
@@ -149,6 +149,7 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
             ltys[i] <- 1
             legs[i] <- cr
         }
+
         if (!is.null(optind)) {
             points(lams[optind], summs[optind2], type='p', cex=1.5, pch=16, col=lcol)
             optcrits <- c(optcrits, cr)
@@ -166,13 +167,14 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
 
 #' Update a pulsar call
 #'
-#' Update and re-fit a model, with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
+#' Update a pulsar model with new or altered arguments. It does this by extracting the call stored in the object, updating the call and (by default) evaluating it in the environment of the original \code{pulsar} call.
 #'
-#' @param object a pulsar or batch.pulsar object
+#' @param object a n existing pulsar or batch.pulsar object
 #' @param ... arguments to \code{pulsar} to update
-#' @param evaluate Flag to evaluate the function. If FALSE, the updated call is returned without evaluation
-#' @return the same output as \code{pulsar} or \code{batch.pulsar}
+#' @param evaluate Flag to evaluate the function. If \code{FALSE}, the updated call is returned without evaluation
+#' @return If \code{evaluate = TRUE}, the fitted object - the same output as \code{pulsar} or \code{batch.pulsar}. Otherwise, the updated call.
 #' @importFrom stats update
+#' @seealso \code{eval}, \code{\link{update}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 #' @export
 update.pulsar <- function(object, ..., evaluate=TRUE) {
     extras <- match.call(expand.dots=FALSE)$...
@@ -199,9 +201,10 @@ update.pulsar <- function(object, ..., evaluate=TRUE) {
 
 #' Get calling environment
 #'
-#' Generic function for extracting an environment from an S3 object \code{x}. Designed as a generic getter for a stored calling environment of the original function.that produces the
+#' Generic S3 method for extracting an environment from an S3 object. A getter for an explicitly stored environment from an S3 object or list... probably the environment where the original function that created the object was called from. The default method is a wrapper for \code{x$envir}.
 #'
-#' @param x S3 object to extract the ennvironment
+#' @param x S3 object to extract the environment
+#' @seealso \code{getCall}, \code{environment}, \code{parent.env}, \code{eval}
 #' @export
 getEnvir <- function(x) {
     UseMethod("getEnvir")

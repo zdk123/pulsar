@@ -1,28 +1,56 @@
+#' @keywords internal
+.lamcheck <- function(lams) {
+    if (is.null(lams)) {
+        stop(paste('Error: missing members in fargs:', 
+             paste(c('lambda')[c(is.null(lams))])))
+    } else {
+        if (!all(lams == cummin(lams)))
+            warning("Are you sure you don't want the lambda path to be monotonically decreasing")
+        if (length(lams) < 2)
+            warning("Only 1 value of lambda is given. Are you sure you want to do model selection?")
+    }
+}
+
+#' @keywords internal
+.ratcheck <- function(subsample.ratio, n) {
+    if (is.null(subsample.ratio)) {
+        if (n > 144)
+            return(10 * sqrt(n)/n)
+        else
+            return(0.8)
+    } else return(subsample.ratio)
+}
+
+#' @keywords internal
+.critcheck0 <- function(criterion, knowncrits) {
+    if (!all(criterion %in% knowncrits)) {
+       stop(paste('Unknown criterion', paste(criterion[!(criterion %in% knowncrits)], 
+                   collapse=", "), sep=": "))
+    }
+    starsdepend <- c("estrada", "sufficiency")
+    if (any(starsdepend %in% knowncrits)) {
+        if (any(starsdepend %in% criterion) && !("stars" %in% criterion)) {
+             stop(paste('Criterion: ', paste(starsdepend[starsdepend %in% criterion], 
+                   collapse=", "), ' cannot be run unless stars is also a selected criterion', sep=""))
+        }
+    }
+    
+}
+
 #' pulsar: serial or parallel mode
 #'
-#' Run pulsar stability selection, or other criteria, to select the sparsity of an undirected gaussian
-#' graphical model. 
+#' Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
 #'
 #' @param data A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model
-#' @param fun pass in a function that returns a list of \eqn{p*p} graphical models along the desired regularization path. The expected inputs to this function are based on the \code{huge} function in the \pkg{huge} package: a raw data input (as opposed to a covariance/correlation matrix) and must return a list or S3 object with a \emph{named} \code{path} list. This should be a list of matrices (or preferable sparse Matrix - see the \pkg{Matrix} package) of adjacency matrices without weights or signs representing the undirected graphical model at each value of \code{lambda}. See details for more information.
+#' @param fun pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.
 #' @param fargs arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.
-#' @param criterion a character vector of selection statistics. Multiple criteria can be supplied. By default, StARS is run. Currently, there are no selection criterion available for summary statistics, aside for stars, so the entire path and summary is returned. The options are:
-#' \itemize{
-#'    \item stars (Stability approach to regularization selection)
-#'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
-#'    \item diss  (Node dissimilarity stability)
-#'    \item estrada (estrada class)
-#'    \item vgraphlet (vertex orbit/graphlet frequency, requires the \pkg{orca} package)
-#'    \item egraphlet (edge orbit/graphlet frequency, requires the \pkg{orca} package)
-#'    \item nc  (natural connectivity)
-#'    \item sufficiency (Ravikumar's sufficiency statistic)
-#' }
-#' @param thresh threshold for selection criterion. Only implemented for StARS. thresh = 0.1 is recommended.
+#' @param criterion A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.
+#' @param thresh threshold for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.
 #' @param subsample.ratio determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.
-#' @param rep.num number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended if using other summary metrics or if using edge frequencies as confidence scores.
+#' @param rep.num number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
-#' @param lb.stars Should the lower bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
-#' @param ub.stars Should the upper bound be computed after N=2 subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
+#' @param lb.stars Should the lower bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
+#' @param ub.stars Should the upper bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more paralellization options.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -30,14 +58,24 @@
 #'    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
 #'    \item criterion: the stability criterion used
 #'    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \emph{0} if no optimum is found or if selection for the criterion is not implemented.
+#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
 #'   }
 #' If \code{stars} is included as a criterion then additional arguments include
 #' \itemize{
-#'    \item lb.index the lambda index of the lower bound at N=2 samples if \code{lb.stars} flag is set to TRUE
-#'    \item ub.index the lambda index of the upper bound at N=2 samples if \code{ub.stars} flag is set to TRUE
+#'    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
+#'    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 #'}
 #' @return call: the original function call
+#' @details
+#' The options for \code{criterion} statistics are:
+#' \itemize{
+#'    \item stars (Stability approach to regularization selection)
+#'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package) see \code{\link{gcvec}}
+#'    \item diss  (Node-node dissimilarity) see \code{\link{graph.diss}}
+#'    \item estrada (estrada class) see \code{\link{estrada.class}}
+#'    \item nc  (natural connectivity) see \code{\link{natural.connectivity}}
+#'    \item sufficiency (Ravikumar's sufficiency statistic)
+#' }
 #' @examples
 #'\dontrun{
 #' ## Generate the data with huge:
@@ -59,36 +97,24 @@
 #' plot(out.b)
 #' }
 #' @importFrom Matrix mean triu
+#' @importFrom parallel mclapply
+#' @references Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv. http://arxiv.org/abs/1605.07072
+#' @references Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularization selection (stars) for high dimensional graphical models. Proceedings of the Twenty-Third Annual Conference on Neural Information Processing Systems (NIPS).
+#' @references Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
+#' @seealso \code{\link{batch.pulsar}}
 #' @export
 pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thresh = 0.1,
-                    subsample.ratio = NULL, rep.num = 20, seed=NULL,
-                     lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
+                   subsample.ratio = NULL, rep.num = 20, seed=NULL,
+                   lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
     gcinfo(FALSE)
     n <- nrow(data)
     p <- ncol(data)
     # min requirements for function args
-    if (is.null(fargs$lambda)) {
-        stop(paste('Error: missing members in fargs:', 
-             paste(c('lambda')[c(is.null(fargs$lambda))])))
-    } else {
-        if (!all(fargs$lambda == cummin(fargs$lambda)))
-            warning("Are you sure you don't want the lambda path to be monotonically decreasing")
-        if (length(fargs$lambda) < 2)
-            warning("Only 1 value of lambda is given. Are you sure you want to do model selection?")
-    }
+    .lamcheck(fargs$lambda)
     nlams <- length(fargs$lambda)
-
     knowncrits <- c("stars", "diss", "estrada", "gcd", "nc", "sufficiency") #"vgraphlet", "egraphlet",
-    if (!all(criterion %in% knowncrits))
-       stop(paste('Error: unknown criterion', 
-            paste(criterion[!(criterion %in% knowncrits)], collapse=", "), sep=": "))
-
-    if (is.null(subsample.ratio)) {
-        if (n > 144)
-            subsample.ratio = 10 * sqrt(n)/n
-        if (n <= 144)
-            subsample.ratio = 0.8
-    }
+    .critcheck0(criterion, knowncrits)
+    subsample.ratio <- .ratcheck(subsample.ratio, n)
 
     if (!is.null(seed)) set.seed(seed)
     ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio), 
@@ -104,11 +130,11 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
         if (!("stars" %in% criterion)) # || length(criterion)>1)
             stop('Lower/Upper bound method must be used with StARS')
         minN <- 2 # Hard code for now
-    } else {
+    } else
         minN <- rep.num
-    }
+
     isamp <- ind.sample[1:minN]
-    premerge <- parallel::mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+    premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
 
 
     if (lb.stars) {
@@ -116,14 +142,12 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
         lb.premerge.reord <- lapply(1:nlams, function(i) lapply(1:minN, 
                               function(j) lb.premerge[[j]][[i]]))
         lb.est            <- stars.stability(lb.premerge.reord, thresh, minN, p)
-
-        if (lb.est$opt.index == 1) 
+        if (lb.est$opt.index == 1)
             warning("Accurate lower bound could not be determine with N=2 subsamples")
+        lb.est$opt.index <- lb.est$opt.index + 1 ## adjust
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
-            pmean <- pmin(sapply(lb.est$merge, function(x) {
-                             mean(triu(x, k=1))
-                            }), 1)
+            pmean <- pmin(sapply(lb.est$merge, function(x) { mean(triu(x, k=1)) }), 1)
             ub.summary <- cummax(4*pmean*(1-pmean))
             tmpub      <- which.max(ub.summary >= thresh)[1] - 2
             if (any(ub.summary == 0))  ## adjust upper bound to exclude empty graphs
@@ -136,7 +160,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
         nlams <- length(fargs$lambda)
         lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[ub.index:lb.est$opt.index])
         isamp <- ind.sample[-(1:minN)]
-        tmp   <- parallel::mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+        tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
         premerge     <- c(lb.premerge, tmp)
     }
 
@@ -154,11 +178,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
       else if (crit == "diss")
         est$diss <-  diss.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-#      else if (crit == "estrada")
-#        est$estrada <- estrada.stability(premerge.reord, thresh, rep.num, p, nlams)
-
       else if (crit == "estrada") {
-        if (!("stars" %in% criterion)) 
+        if (!("stars" %in% criterion))
             warning('Need StaRS for computing Estrada classes... not run')
         else  est$estrada <- estrada.stability(est$stars$merge, thresh, rep.num, p, nlams)
       }
@@ -189,16 +210,19 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
       tmpsumm <- vector('numeric', length(lb.est$summary))
       tmpsumm[p2ind] <- lb.est$summary[p2ind]
       tmpsumm[pind]  <- est$stars$summary
-      est$stars$summary <- tmpsumm
+      est$stars$summary   <- tmpsumm
+
+      est$stars$opt.index <- if (ub.index > 1) .starsind(tmpsumm[-(1:(ub.index-1))], thresh) + ub.index - 1
+                             else .starsind(tmpsumm, thresh)
 
       tmpmerg <- vector('list', length(lb.est$summary))
-      tmpmerg[p2ind] <- lb.est$merge[p2ind]
-      tmpmerg[pind]  <- est$stars$merge
+      tmpmerg[p2ind]  <- lb.est$merge[p2ind]
+      tmpmerg[pind]   <- est$stars$merge
       est$stars$merge <- tmpmerg
 
-      est$stars$lb.index <- lb.est$opt.index
-      est$stars$ub.index <- ub.index
-      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
+      est$stars$lb.index  <- lb.est$opt.index
+      est$stars$ub.index  <- ub.index
+
     }
     if ("stars" %in% criterion) {
         if (est$stars$opt.index == 1)
@@ -209,6 +233,10 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
     return(structure(est, class="pulsar"))
 }
 
+#' @keywords internal
+.starsind <- function(summary, thresh) {
+    max(which.max(summary >= thresh)[1] - 1, 1)
+}
 
 #' @keywords internal
 stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL) {
@@ -228,7 +256,7 @@ stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL) {
     }
     ## monotonize variability
     est$summary <- cummax(est$summary)
-    est$opt.index    <- max(which.max(est$summary >= stars.thresh)[1] - 1, 1)
+    est$opt.index <- .starsind(est$summary, stars.thresh)
     est$criterion <- "stars.stability"
     est$thresh    <- stars.thresh
     return(est)
