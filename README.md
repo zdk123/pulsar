@@ -14,7 +14,6 @@ Table of Contents
   * [Graphlet stability](#graphlet-stability)
   * [Batch Mode](#batch-mode)
     * [Notes](#a-few-notes-on-batch-mode-pulsar)
-  * [Additional criteria](#additional-criteria)
 
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path
 
@@ -136,7 +135,7 @@ Compare runtimes and StARS selected lambda index for each method.
 
 ```r
 time2[[3]] < time1[[3]]
-# [1] TRUE
+# [1] FALSE
 opt.index(out.p, 'stars') == opt.index(out.b, 'stars')
 # [1] TRUE
 ```
@@ -196,7 +195,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/V8cdpy0.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/1ZzmMNs.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -215,7 +214,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/STG7Lhb.png)
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/XmCbprU.png)
 
 ## Batch Mode
 
@@ -326,51 +325,3 @@ It is up to the user to re-start `pulsar` if there is a sampling-dependent reaso
 jobs fail: e.g. an outlier datapoint increases computation time or graph density and insufficient
 resources are allocated.
 
-## Additional criteria
-
-Pulsar includes several other criteria of interest, which can be run indepedently of StARS (these
-are not yet included for batch mode). For example, to replicate the augmented AGNES (A-AGNES) method
-of [Caballe et al 2016](http://arxiv.org/abs/1509.05326), use the node-wise dissimilarity metric 
-(diss) and the AGNES algorithm as implemented in the `cluster` package. A-AGNES selects a target
-lambda that mimimizes the variance of the estimated diss (computed by `pulsar`) + the [squared] bias
-of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that has the maximum
-agglomerative coefficient over the path.
-
-
-```r
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, 
-                    criterion='diss', seed=10010, ncores=nc)
-fit <- refit(out.diss)
-## Compute the max agglomerative coefficient over the full path
-path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
-ac <- sapply(path.diss, acfun)
-ac.sel <- out.diss$diss$merge[[which.max(ac)]]
-
-## Estimate the diss bias
-dissbias <- sapply(out.diss$diss$merge,
-                   function(x) mean((x-ac.sel)^2)/2)
-varbias  <- out.diss$diss$summary + dissbias
-
-## Select the index and refit
-opt.index(out.diss, 'diss') <- which.min(varbias)
-fit.diss <- refit(out.diss)
-```
-
-Evalue the edge-wide model error:
-
-```r
-aagneserr <- sum(fit.diss$refit$diss != dat$theta)/p^2
-aagneserr < starserr
-# [1] TRUE
-aagneserr < gcderr
-# [1] FALSE
-```
-
-Other criteria that are currently implemented are [natural connectivity](http://iopscience.iop.org/0256-307X/27/7/078902)
-stability, Tandon & Ravikumar's [sufficiency criterion](http://jmlr.org/proceedings/papers/v32/tandon14.html)
-and variability of the [Estrada index](http://journals.aps.org/pre/abstract/10.1103/PhysRevE.75.016103).
-These are currently implemented without a default method for actually selecting an optimal lambda,
-but as demonstrated above, these can be _ex post_ with a `pulsar` object.
-
-Feel free to request your favorite selection criterion to include with this package.
