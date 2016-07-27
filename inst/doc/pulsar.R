@@ -3,7 +3,9 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#"
 )
-pulsarchunks = FALSE
+library(pulsar)
+pulsarchunks = TRUE
+getconfig    = TRUE
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  library(devtools)
@@ -11,55 +13,58 @@ pulsarchunks = FALSE
 #  library(pulsar)
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
-#  library(huge)
-#  set.seed(10010)
-#  p <- 40 ; n <- 1200
-#  dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-#  lams <- getLamPath(.2, .01, len=40)
+library(huge)
+set.seed(10010)
+p <- 40 ; n <- 2000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.35)
+lmax <- getMaxCov(dat$sigmahat)
+lams <- getLamPath(lmax, lmax*.05, len=40)
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
-#  hugeargs <- list(lambda=lams, verbose=FALSE)
-#  time1    <- system.time(
-#  out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
-#                     criterion='stars', seed=10010)
-#              )
-#  fit.p    <- refit(out.p)
+hugeargs <- list(lambda=lams, verbose=FALSE)
+time1    <- system.time(
+out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
+                   criterion='stars', seed=10010)
+            )
+fit.p    <- refit(out.p)
 
 ## ---- eval=TRUE, message=FALSE-------------------------------------------
 out.p
 fit.p
 
 ## ---- eval=pulsarchunks--------------------------------------------------
-#  time2 <- system.time(
-#  out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
-#                  lb.stars=TRUE, ub.stars=TRUE, seed=10010))
+time2 <- system.time(
+out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
+                lb.stars=TRUE, ub.stars=TRUE, seed=10010)
+               )
 
 ## ---- eval=TRUE----------------------------------------------------------
 time2[[3]] < time1[[3]]
 opt.index(out.p, 'stars') == opt.index(out.b, 'stars')
 
 ## ---- eval=pulsarchunks--------------------------------------------------
-#  library(QUIC)
-#  quicr <- function(data, lambda) {
-#      S    <- cov(data)
-#      est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
-#      path <-  lapply(seq(length(lambda)), function(i) {
-#                  tmp <- est$X[,,i]; diag(tmp) <- 0
-#                  as(tmp!=0, "lgCMatrix")
-#      })
-#      est$path <- path
-#      est
-#  }
+library(QUIC)
+quicr <- function(data, lambda) {
+    S    <- cov(data)
+    est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
+    path <-  lapply(seq(length(lambda)), function(i) {
+                tmp <- est$X[,,i]; diag(tmp) <- 0
+                as(tmp!=0, "lgCMatrix")
+    })
+    est$path <- path
+    est
+}
 
 ## ---- eval=pulsarchunks--------------------------------------------------
-#  quicargs <- list(lambda=lams)
-#  out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
-#                  lb.stars=TRUE, ub.stars=TRUE, ncores=2, seed=10010)
+quicargs <- list(lambda=lams)
+nc <- if (.Platform$OS.type == 'unix') 2 else 1
+out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
+                lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 
 ## ---- eval=pulsarchunks--------------------------------------------------
-#  out.q2 <- update(out.q, criterion=c('stars', 'gcd'))
-#  opt.index(out.q2, 'gcd') <- get.opt.index(out.q2, 'gcd')
-#  fit.q2 <- refit(out.q2)
+out.q2 <- update(out.q, criterion=c('stars', 'gcd'))
+opt.index(out.q2, 'gcd') <- get.opt.index(out.q2, 'gcd')
+fit.q2 <- refit(out.q2)
 
 ## ---- eval=TRUE, fig.width=12, fig.height=6, message=FALSE---------------
 plot(out.q2, scale=TRUE)
@@ -70,58 +75,36 @@ gcderr   <- sum(fit.q2$refit$gcd   != dat$theta)/p^2
 gcderr < starserr
 
 ## install.packages('network')
-truenet  <- network::network(dat$theta)
-starsnet <- network::network(summary(fit.q2$refit$stars))
-gcdnet   <- network::network(summary(fit.q2$refit$gcd))
+library(network)
+truenet  <- network(dat$theta)
+starsnet <- network(summary(fit.q2$refit$stars))
+gcdnet   <- network(summary(fit.q2$refit$gcd))
 par(mfrow=c(1,3))
 coords <- plot(truenet, usearrows=FALSE, main="TRUE")
 plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 
-## ---- eval=FALSE---------------------------------------------------------
-#  url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
-#  url <- paste(url, "BatchJobsSerialTest.R", sep="/") # Serial mode
-#  download.file(url, destfile=".BatchJobs.R")
+## ---- eval=getconfig-----------------------------------------------------
+url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
+url <- paste(url, "BatchJobsSerialTest.R", sep="/") # Serial mode
+download.file(url, destfile=".BatchJobs.R")
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
-#  ## uncomment below if BatchJobs is not already installed
-#  # install.packages('BatchJobs')
-#  library(BatchJobs)
-#  out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
-#                            criterion='stars', seed=10010
-#                            #, cleanup=TRUE
-#                           )
+## uncomment below if BatchJobs is not already installed
+# install.packages('BatchJobs')
+library(BatchJobs)
+out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
+                          criterion='stars', seed=10010
+                          #, cleanup=TRUE
+                         )
 
 ## ---- eval=TRUE, message=FALSE-------------------------------------------
 opt.index(out.q, 'stars') == opt.index(out.batch, 'stars')
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
-#  out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
-#                       lb.stars=TRUE, ub.stars=TRUE)
+out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
+                     lb.stars=TRUE, ub.stars=TRUE)
 
 ## ---- eval=TRUE, message=FALSE-------------------------------------------
 opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
-
-## ---- eval=pulsarchunks, warning=FALSE, message=FALSE--------------------
-#  out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='diss', seed=10010, ncores=2)
-#  fit <- refit(out.diss)
-#  ## Compute the max agglomerative coefficient over the full path
-#  path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-#  acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
-#  ac <- sapply(path.diss, acfun)
-#  ac.sel <- out.diss$diss$merge[[which.max(ac)]]
-#  
-#  ## Estimate the diss bias
-#  dissbias <- sapply(out.diss$diss$merge,
-#                     function(x) mean((x-ac.sel)^2)/2)
-#  varbias  <- out.diss$diss$summary + dissbias
-#  
-#  ## Select the index and refit
-#  opt.index(out.diss, 'diss') <- which.min(varbias)
-#  fit.diss <-refit(out.diss)
-
-## ---- eval=TRUE, warning=FALSE, message=FALSE----------------------------
-aagneserr <- sum(fit.diss$refit$diss != dat$theta)/p^2
-aagneserr < starserr
-aagneserr < gcderr
 

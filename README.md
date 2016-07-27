@@ -10,10 +10,10 @@ Table of Contents
   * [Introduction](#introduction)
   * [Installation](#installation)
   * [Basic usage](#basic-usage)
-  * [Using a custom graphical model method](#using-a-custom-graphical-model-method)
+  * [Custom methods](#using-a-custom-graphical-model-method)
   * [Graphlet stability](#graphlet-stability)
   * [Batch Mode](#batch-mode)
-    * [A few notes on batch mode pulsar](#a-few-notes-on-batch-mode-pulsar)
+    * [Notes](#a-few-notes-on-batch-mode-pulsar)
   * [Additional criteria](#additional-criteria)
 
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path
@@ -80,9 +80,10 @@ For this readme, we will use synthetic data, generated from the `huge` package.
 ```r
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 1200
-dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-lams <- getLamPath(.2, .01, len=40)
+p <- 40 ; n <- 2000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.35)
+lmax <- getMaxCov(dat$sigmahat)
+lams <- getLamPath(lmax, lmax*.05, len=40)
 ```
 
 You can use the `pulsar` package to run StARS, serially, as a drop-in replacement for the
@@ -95,7 +96,7 @@ code).
 ```r
 hugeargs <- list(lambda=lams, verbose=FALSE)
 time1    <- system.time(
-out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, 
+out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
                    criterion='stars', seed=10010)
             )
 fit.p    <- refit(out.p)
@@ -110,13 +111,13 @@ out.p
 # Subsamples:  20 
 # Graph dim:   40 
 # Criterion:
-#   stars... opt: index 15, lambda 0.132
+#   stars... opt: index 14, lambda 0.117
 fit.p
 # Pulsar-selected refit of huge 
 # Path length: 40 
 # Graph dim:   40 
 # Criterion:
-#   stars... sparsity 0.0325
+#   stars... sparsity 0.0338
 ```
 
 Including the lower bound option `lb.stars` and upper bound option `ub.stars` can improve runtime
@@ -126,7 +127,8 @@ for same StARS result.
 ```r
 time2 <- system.time(
 out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, seed=10010))
+                lb.stars=TRUE, ub.stars=TRUE, seed=10010)
+               )
 ```
 
 Compare runtimes and StARS selected lambda index for each method.
@@ -168,8 +170,9 @@ machines by specifying ncores (which wraps mclapply in the parallel package).
 
 ```r
 quicargs <- list(lambda=lams)
+nc <- if (.Platform$OS.type == 'unix') 2 else 1
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, ncores=2, seed=10010)
+                lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 ```
 
 ## Graphlet stability
@@ -193,7 +196,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/lm4FUFu.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/V8cdpy0.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -212,7 +215,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/IR4a5lp.png)
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/STG7Lhb.png)
 
 ## Batch Mode
 
@@ -335,7 +338,8 @@ agglomerative coefficient over the path.
 
 
 ```r
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='diss', seed=10010, ncores=2)
+out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, 
+                    criterion='diss', seed=10010, ncores=nc)
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
@@ -350,7 +354,7 @@ varbias  <- out.diss$diss$summary + dissbias
 
 ## Select the index and refit
 opt.index(out.diss, 'diss') <- which.min(varbias)
-fit.diss <-refit(out.diss)
+fit.diss <- refit(out.diss)
 ```
 
 Evalue the edge-wide model error:

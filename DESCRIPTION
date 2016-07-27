@@ -11,11 +11,13 @@ Depends:
     R (>= 3.2.0)
 License: GPL (>= 2)
 Suggests:
+    BatchJobs,
+    orca,
     huge,
     QUIC,
-    orca,
-    BatchJobs,
+    glmnet,
     network,
+    cluster,
     testthat,
     knitr,
     rmarkdown

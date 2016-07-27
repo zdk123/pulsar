@@ -47,6 +47,7 @@ get.opt.index <- function(obj, criterion="gcd", ...) {
             stop('Lower bound needed for gcd metric (run with lb.stars=TRUE)')
         gcdind <- which.min(getElement(obj, criterion)$summary)
         gcdind <- gcdind + obj$stars$ub.index - 1
+        names(gcdind) <- criterion
         return(gcdind)
     } else {
         stop("Currently, gcd is the only supported criterion")
@@ -58,10 +59,10 @@ get.opt.index <- function(obj, criterion="gcd", ...) {
 #' Get or set the optimal index of the lambda path, as determined by a given criterion. \code{value} must be a numeric/int.
 #'
 #' @param obj a pulsar or batch.pulsar object
-#' @param criterion a summary statistic criterion for lambda selection
+#' @param criterion a summary statistic criterion for lambda selection. If value is not named, default to gcd.
 #' @seealso \code{\link{get.opt.index}}
 #' @export
-opt.index <- function(obj, criterion='stars') {
+opt.index <- function(obj, criterion='gcd') {
     .pcheck(obj)
     .critcheck(obj, criterion)
     getElement(obj, criterion)$opt.index
@@ -70,13 +71,16 @@ opt.index <- function(obj, criterion='stars') {
 #' @param value Integer index for optimal lambda by criterion
 #' @rdname opt.index
 #' @export
-"opt.index<-" <- function(obj, criterion='stars', value) {
+"opt.index<-" <- function(obj, criterion=names(value), value) {
     .pcheck(obj)
     fin <- getArgs(obj$call, obj$envir)
     .critcheck(obj, criterion)
     if (length(criterion) > 1) stop("Select one criterion")
-    if (!is.numeric(value) || value < 1 || value >= length(fin$fargs$lambda))
+    if (is.null(criterion)) criterion <- 'gcd'
+    if (!is.null(value)) {
+      if (!is.numeric(value) || value < 1 || value >= length(fin$fargs$lambda))
         stop('Index value must be positive int within range length of lambda path')
+    }
     obj[[ criterion ]]$opt.index <- value
     obj
 }

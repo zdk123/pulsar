@@ -144,12 +144,11 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
         lb.est            <- stars.stability(lb.premerge.reord, thresh, minN, p)
         if (lb.est$opt.index == 1)
             warning("Accurate lower bound could not be determine with N=2 subsamples")
-        lb.est$opt.index <- lb.est$opt.index + 1 ## adjust
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
-            pmean <- pmin(sapply(lb.est$merge, function(x) { mean(triu(x, k=1)) }), 1)
+            pmean <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
             ub.summary <- cummax(4*pmean*(1-pmean))
-            tmpub      <- which.max(ub.summary >= thresh)[1] - 2
+            tmpub      <- .starsind(ub.summary, thresh, 1)
             if (any(ub.summary == 0))  ## adjust upper bound to exclude empty graphs
                 ub.index <- max(tmpub, max(which(ub.summary == 0))+1)
             else
@@ -164,8 +163,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
         premerge     <- c(lb.premerge, tmp)
     }
 
-    premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, 
-                              function(j) premerge[[j]][[i]]))
+    premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, function(j) premerge[[j]][[i]]))
     rm(premerge) ; gc()
     est <- list()
     
@@ -212,18 +210,16 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
       tmpsumm[pind]  <- est$stars$summary
       est$stars$summary   <- tmpsumm
 
-      est$stars$opt.index <- if (ub.index > 1) .starsind(tmpsumm[-(1:(ub.index-1))], thresh) + ub.index - 1
-                             else .starsind(tmpsumm, thresh)
-
       tmpmerg <- vector('list', length(lb.est$summary))
       tmpmerg[p2ind]  <- lb.est$merge[p2ind]
       tmpmerg[pind]   <- est$stars$merge
       est$stars$merge <- tmpmerg
 
       est$stars$lb.index  <- lb.est$opt.index
-      est$stars$ub.index  <- ub.index
-
+      est$stars$ub.index  <- ub.index #min(, est$stars$opt.index)
+      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
     }
+
     if ("stars" %in% criterion) {
         if (est$stars$opt.index == 1)
             warning("Optimal lambda may not be included within the supplied path")
@@ -234,8 +230,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
 }
 
 #' @keywords internal
-.starsind <- function(summary, thresh) {
-    max(which.max(summary >= thresh)[1] - 1, 1)
+.starsind <- function(summary, thresh, offset=1) {
+    max(which.max(summary >= thresh)[1] - offset, 1)
 }
 
 #' @keywords internal
@@ -336,7 +332,6 @@ nc.stability <- function(premerge, thresh, rep.num, p, nlams) {
     est$summary <- colMeans(est$merge)
     est$criterion <- "nc.stability"
     return(est)
-
 }
 
 #' @importFrom stats dist
