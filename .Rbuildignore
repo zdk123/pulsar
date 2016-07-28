@@ -1,0 +1,4 @@
+^.*\.BatchJobs.*\.R$
+^README\.Rmd$
+^README\.log$
+^figure$
