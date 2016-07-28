@@ -1,16 +1,15 @@
-Table of Contents
-=================
-
-* [pulsar](#pulsar-paralellized-utilities-for-lambda-selection-along-a-regularization-path)
-  * [Introduction](#introduction)
-  * [Installation](#installation)
-  * [Basic usage](#basic-usage)
-  * [Custom methods](#using-a-custom-graphical-model-method)
-  * [Graphlet stability](#graphlet-stability)
-  * [Batch Mode](#batch-mode)
-    * [Notes](#a-few-notes-on-batch-mode-pulsar)
-
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path
+
+
+## Table of Contents
+
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Basic usage](#basic-usage)
+* [Custom methods](#using-a-custom-graphical-model-method)
+* [Graphlet stability](#graphlet-stability)
+* [Batch Mode](#batch-mode)
+  * [Notes](#a-few-notes-on-batch-mode-pulsar)
 
 ## Introduction
 
@@ -72,8 +71,8 @@ For this readme, we will use synthetic data, generated from the `huge` package.
 ```{r, eval=pulsarchunks, message=FALSE}
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 2000
-dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.35)
+p <- 40 ; n <- 3000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.5)
 lmax <- getMaxCov(dat$sigmahat)
 lams <- getLamPath(lmax, lmax*.05, len=40)
 ```

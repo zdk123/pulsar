@@ -1,21 +1,21 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 
+[![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
-
-Table of Contents
-=================
-
-* [pulsar](#pulsar-paralellized-utilities-for-lambda-selection-along-a-regularization-path)
-  * [Introduction](#introduction)
-  * [Installation](#installation)
-  * [Basic usage](#basic-usage)
-  * [Custom methods](#using-a-custom-graphical-model-method)
-  * [Graphlet stability](#graphlet-stability)
-  * [Batch Mode](#batch-mode)
-    * [Notes](#a-few-notes-on-batch-mode-pulsar)
 
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path
+
+
+## Table of Contents
+
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Basic usage](#basic-usage)
+* [Custom methods](#using-a-custom-graphical-model-method)
+* [Graphlet stability](#graphlet-stability)
+* [Batch Mode](#batch-mode)
+  * [Notes](#a-few-notes-on-batch-mode-pulsar)
 
 ## Introduction
 
@@ -79,8 +79,8 @@ For this readme, we will use synthetic data, generated from the `huge` package.
 ```r
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 2000
-dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.35)
+p <- 40 ; n <- 3000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.5)
 lmax <- getMaxCov(dat$sigmahat)
 lams <- getLamPath(lmax, lmax*.05, len=40)
 ```
@@ -110,13 +110,13 @@ out.p
 # Subsamples:  20 
 # Graph dim:   40 
 # Criterion:
-#   stars... opt: index 14, lambda 0.117
+#   stars... opt: index 12, lambda 0.105
 fit.p
 # Pulsar-selected refit of huge 
 # Path length: 40 
 # Graph dim:   40 
 # Criterion:
-#   stars... sparsity 0.0338
+#   stars... sparsity 0.025
 ```
 
 Including the lower bound option `lb.stars` and upper bound option `ub.stars` can improve runtime
@@ -135,7 +135,7 @@ Compare runtimes and StARS selected lambda index for each method.
 
 ```r
 time2[[3]] < time1[[3]]
-# [1] FALSE
+# [1] TRUE
 opt.index(out.p, 'stars') == opt.index(out.b, 'stars')
 # [1] TRUE
 ```
@@ -195,7 +195,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/1ZzmMNs.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/5EBj5rX.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -214,7 +214,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/XmCbprU.png)
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/kPRFVs4.png)
 
 ## Batch Mode
 
