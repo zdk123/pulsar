@@ -37,6 +37,7 @@ getArgs <- function(call, envir=parent.frame()) {
 #' \itemize{
 #'  \item gcd: Select the mimimum gcd summary score within the lower and upper StARS bounds.
 #' }
+#' @return index of the lambda path
 #' @seealso \code{\link{opt.index}}
 #' @export
 get.opt.index <- function(obj, criterion="gcd", ...) {
@@ -105,6 +106,7 @@ opt.index <- function(obj, criterion='gcd') {
 #' maxCov <- getMaxCov(dat$data)
 #' lams   <- getLamPath(maxCov, 5e-2*maxCov, len=40)
 #'
+#' @seealso \code{\link{getMaxCov}}
 #' @export
 getLamPath <- function(max, min, len, log=FALSE) {
     if (max < min) stop('Did you flip min and max?')
@@ -114,16 +116,20 @@ getLamPath <- function(max, min, len, log=FALSE) {
     else lams
 }
 
-#' Max absolute value of cov matrix
+#' Max value of cov
 #'
-#' Get the maximum absolute value of a covariance matrix.
+#' Get the maximum [absolute] value of a covariance matrix.
 #'
 #' @param x A matrix/Matrix of data or covariance
 #' @param cov Flag if \code{x} is a covariance matrix, Set False is \code{x} is an nxp data matrix. By default, if \code{x} is symmetric, assume it is a covariance matrix.
+#' @param abs Flag to get max absolute value
 #' @param diag Flag to include diagonal entries in the max
+#' @details This function is useful to determine the theoretical value for lambda_max - for Gaussian data, but may be a useful starting point in the general case as well.
+#' @seealso \code{\link{getLamPath}}
 #' @export
-getMaxCov <- function(x, cov=isSymmetric(x), diag=FALSE) {
+getMaxCov <- function(x, cov=isSymmetric(x), abs=TRUE, diag=FALSE) {
     if (!cov) x <- cov(x)
-    k <- if (diag) 0 else 1
-    max(abs(Matrix::triu(x, k=k)))
+    tmp <- Matrix::triu(x, k=if (diag) 0 else 1)
+    tmp <- if (abs) abs(tmp) else tmp
+    max(tmp)
 }

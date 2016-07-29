@@ -65,10 +65,9 @@ The options for \code{criterion} statistics are:
 \dontrun{
 ## Generate the data with huge:
 library(huge)
-set.seed(10010)
 p <- 40 ; n <- 1200
 dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-lams  <- getLamPath(.2, .01, len=40)
+lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
 
 ## Run pulsar with huge
 hugeargs <- list(lambda=lams, verbose=FALSE)

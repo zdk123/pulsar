@@ -1,5 +1,6 @@
 ---
 title: "Alternate selection criteria with pulsar"
+author: "Zachary D. Kurtz"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Alternate selection criteria with pulsar}

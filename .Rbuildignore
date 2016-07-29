@@ -2,3 +2,4 @@
 ^README\.Rmd$
 ^README\.log$
 ^figure$
+^\.travis\.yml$
