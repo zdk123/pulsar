@@ -22,6 +22,9 @@ a \code{pulsar.refit} S3 object with members:
 \description{
 Run the supplied graphical model function on the whole dataset and refit with the selected lambda(s)
 }
+\details{
+The \code{refit} call is evaluated in the environment specified by the \code{pulsar} or \code{batch.pulsar} object, so if any variables were used for arguments to the original call, unless they are purposefully updated, should not be altered. For example, if the variable for the original data is reassigned, the output of \code{refit} will not be on the original dataset.
+}
 \examples{
 
 ## Generate the data with huge:
@@ -30,7 +33,7 @@ library(huge)
 set.seed(10010)
 p <- 40 ; n <- 1200
 dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-lams  <- getLamPath(getMaxCov(dat$data), .01, len=40)
+lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
 
 ## Run pulsar with huge
 hugeargs <- list(lambda=lams, verbose=FALSE)

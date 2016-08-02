@@ -33,4 +33,7 @@ maxCov <- getMaxCov(dat$data)
 lams   <- getLamPath(maxCov, 5e-2*maxCov, len=40)
 
 }
+\seealso{
+\code{\link{getMaxCov}}
+}
 

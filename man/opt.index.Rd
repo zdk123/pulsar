@@ -5,14 +5,14 @@
 \alias{opt.index<-}
 \title{Optimal index}
 \usage{
-opt.index(obj, criterion = "stars")
+opt.index(obj, criterion = "gcd")
 
-opt.index(obj, criterion = "stars") <- value
+opt.index(obj, criterion = names(value)) <- value
 }
 \arguments{
 \item{obj}{a pulsar or batch.pulsar object}
 
-\item{criterion}{a summary statistic criterion for lambda selection}
+\item{criterion}{a summary statistic criterion for lambda selection. If value is not named, default to gcd.}
 
 \item{value}{Integer index for optimal lambda by criterion}
 }

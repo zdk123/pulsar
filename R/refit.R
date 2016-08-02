@@ -4,6 +4,7 @@
 #'
 #' @param obj a fitted \code{pulsar} or \code{batch.pulsar} object
 #' @param criterion a vector of criteria for refitting on full data. An optimal index must be defined for each or a warning will result. If missing (no argument is supplied), try to refit all criterion.
+#' @details The \code{refit} call is evaluated in the environment specified by the \code{pulsar} or \code{batch.pulsar} object, so if any variables were used for arguments to the original call, unless they are purposefully updated, should not be altered. For example, if the variable for the original data is reassigned, the output of \code{refit} will not be on the original dataset.
 #' @return a \code{pulsar.refit} S3 object with members:
 #' \itemize{
 #'   \item est: the raw output from the graphical model function, \code{fun}, applied to the full dataset.
@@ -18,7 +19,7 @@
 #' set.seed(10010)
 #' p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-#' lams  <- getLamPath(getMaxCov(dat$data), .01, len=40)
+#' lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
 #' 
 #' ## Run pulsar with huge
 #' hugeargs <- list(lambda=lams, verbose=FALSE)
@@ -41,7 +42,7 @@ refit.pulsar <- function(obj, criterion) {
 .refit.pulsar <- function(obj, criterion) {
     est <- vector('list', 2)
     names(est) <- c('est', 'refit')
-    fin <- getArgs(obj$call, obj$envir)
+    fin <- getArgs(getCall(obj), getEnvir(obj))
     ## call est function on original dataset
     est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))
     if (missing(criterion)) criterion <- eval(fin$criterion)

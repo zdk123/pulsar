@@ -13,6 +13,9 @@ get.opt.index(obj, criterion = "gcd", ...)
 
 \item{...}{Ignored}
 }
+\value{
+index of the lambda path
+}
 \description{
 If the optimal index for the lambda path is not already assigned, then use a validated method to 
 select the optimal index of the lambda path for alternate criteria  (i.e. other than StARS).

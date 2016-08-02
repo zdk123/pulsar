@@ -1,10 +1,10 @@
 source('pulsarfuns.R')
 
 rseed <-  10010 #sample.int(1000, 1) #
-p <- 12
+p <- 10
 ## generate synthetic data
 set.seed(rseed)
-dat <- huge::huge.generator(p*10, p, "hub", prob=.25, verbose=FALSE, v=.1, u=.5)
+dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.1, u=.4)
 
 library(BatchJobs)
 options(BatchJobs.verbose=FALSE)

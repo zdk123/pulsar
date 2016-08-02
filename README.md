@@ -1,22 +1,21 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 
+[![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
-
-Table of Contents
-=================
-
-* [pulsar](#pulsar-paralellized-utilities-for-lambda-selection-along-a-regularization-path)
-  * [Introduction](#introduction)
-  * [Installation](#installation)
-  * [Basic usage](#basic-usage)
-  * [Using a custom graphical model method](#using-a-custom-graphical-model-method)
-  * [Graphlet stability](#graphlet-stability)
-  * [Batch Mode](#batch-mode)
-    * [A few notes on batch mode pulsar](#a-few-notes-on-batch-mode-pulsar)
-  * [Additional criteria](#additional-criteria)
 
 # pulsar: Paralellized Utilities for lambda Selection Along a Regularization path
+
+
+## Table of Contents
+
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Basic usage](#basic-usage)
+* [Custom methods](#using-a-custom-graphical-model-method)
+* [Graphlet stability](#graphlet-stability)
+* [Batch Mode](#batch-mode)
+  * [Notes](#a-few-notes-on-batch-mode-pulsar)
 
 ## Introduction
 
@@ -80,9 +79,10 @@ For this readme, we will use synthetic data, generated from the `huge` package.
 ```r
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 1200
-dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
-lams <- getLamPath(.2, .01, len=40)
+p <- 40 ; n <- 3000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.5)
+lmax <- getMaxCov(dat$sigmahat)
+lams <- getLamPath(lmax, lmax*.05, len=40)
 ```
 
 You can use the `pulsar` package to run StARS, serially, as a drop-in replacement for the
@@ -95,7 +95,7 @@ code).
 ```r
 hugeargs <- list(lambda=lams, verbose=FALSE)
 time1    <- system.time(
-out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, 
+out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
                    criterion='stars', seed=10010)
             )
 fit.p    <- refit(out.p)
@@ -110,13 +110,13 @@ out.p
 # Subsamples:  20 
 # Graph dim:   40 
 # Criterion:
-#   stars... opt: index 15, lambda 0.132
+#   stars... opt: index 12, lambda 0.105
 fit.p
 # Pulsar-selected refit of huge 
 # Path length: 40 
 # Graph dim:   40 
 # Criterion:
-#   stars... sparsity 0.0325
+#   stars... sparsity 0.025
 ```
 
 Including the lower bound option `lb.stars` and upper bound option `ub.stars` can improve runtime
@@ -126,7 +126,8 @@ for same StARS result.
 ```r
 time2 <- system.time(
 out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, seed=10010))
+                lb.stars=TRUE, ub.stars=TRUE, seed=10010)
+               )
 ```
 
 Compare runtimes and StARS selected lambda index for each method.
@@ -168,8 +169,9 @@ machines by specifying ncores (which wraps mclapply in the parallel package).
 
 ```r
 quicargs <- list(lambda=lams)
+nc <- if (.Platform$OS.type == 'unix') 2 else 1
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, ncores=2, seed=10010)
+                lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 ```
 
 ## Graphlet stability
@@ -193,7 +195,7 @@ graph and visualize the results:
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-12](http://i.imgur.com/lm4FUFu.png)
+![plot of chunk unnamed-chunk-12](http://i.imgur.com/5EBj5rX.png)
 
 ```r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -212,7 +214,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
 ```
 
-![plot of chunk unnamed-chunk-13](http://i.imgur.com/IR4a5lp.png)
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/kPRFVs4.png)
 
 ## Batch Mode
 
@@ -323,50 +325,3 @@ It is up to the user to re-start `pulsar` if there is a sampling-dependent reaso
 jobs fail: e.g. an outlier datapoint increases computation time or graph density and insufficient
 resources are allocated.
 
-## Additional criteria
-
-Pulsar includes several other criteria of interest, which can be run indepedently of StARS (these
-are not yet included for batch mode). For example, to replicate the augmented AGNES (A-AGNES) method
-of [Caballe et al 2016](http://arxiv.org/abs/1509.05326), use the node-wise dissimilarity metric 
-(diss) and the AGNES algorithm as implemented in the `cluster` package. A-AGNES selects a target
-lambda that mimimizes the variance of the estimated diss (computed by `pulsar`) + the [squared] bias
-of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that has the maximum
-agglomerative coefficient over the path.
-
-
-```r
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='diss', seed=10010, ncores=2)
-fit <- refit(out.diss)
-## Compute the max agglomerative coefficient over the full path
-path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
-ac <- sapply(path.diss, acfun)
-ac.sel <- out.diss$diss$merge[[which.max(ac)]]
-
-## Estimate the diss bias
-dissbias <- sapply(out.diss$diss$merge,
-                   function(x) mean((x-ac.sel)^2)/2)
-varbias  <- out.diss$diss$summary + dissbias
-
-## Select the index and refit
-opt.index(out.diss, 'diss') <- which.min(varbias)
-fit.diss <-refit(out.diss)
-```
-
-Evalue the edge-wide model error:
-
-```r
-aagneserr <- sum(fit.diss$refit$diss != dat$theta)/p^2
-aagneserr < starserr
-# [1] TRUE
-aagneserr < gcderr
-# [1] FALSE
-```
-
-Other criteria that are currently implemented are [natural connectivity](http://iopscience.iop.org/0256-307X/27/7/078902)
-stability, Tandon & Ravikumar's [sufficiency criterion](http://jmlr.org/proceedings/papers/v32/tandon14.html)
-and variability of the [Estrada index](http://journals.aps.org/pre/abstract/10.1103/PhysRevE.75.016103).
-These are currently implemented without a default method for actually selecting an optimal lambda,
-but as demonstrated above, these can be _ex post_ with a `pulsar` object.
-
-Feel free to request your favorite selection criterion to include with this package.

@@ -74,6 +74,8 @@ The options for \code{criterion} statistics are:
 \itemize{
    \item stars (Stability approach to regularization selection)
    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
+   \item estrada (estrada class) see \code{\link{estrada.class}}
+   \item sufficiency (Ravikumar's sufficiency statistic)
 }
 }
 \examples{

@@ -35,9 +35,9 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     })
 
     mlam <- signif(getMaxCov(dat$sigmahat)+.1, 3)
-    lams  <- getLamPath(mlam, .05, 20)
+    lams  <- getLamPath(mlam, .05, 15)
     hargs <- c(fargs, list(lambda=lams))
-    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion=c("stars"), rep.num=5, ...)
+    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion=c("stars"), rep.num=4, ...)
     outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE, criterion=c("stars", "gcd"))
 
 

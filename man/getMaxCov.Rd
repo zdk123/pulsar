@@ -2,18 +2,26 @@
 % Please edit documentation in R/utilities.R
 \name{getMaxCov}
 \alias{getMaxCov}
-\title{Max absolute value of cov matrix}
+\title{Max value of cov}
 \usage{
-getMaxCov(x, cov = isSymmetric(x), diag = FALSE)
+getMaxCov(x, cov = isSymmetric(x), abs = TRUE, diag = FALSE)
 }
 \arguments{
 \item{x}{A matrix/Matrix of data or covariance}
 
 \item{cov}{Flag if \code{x} is a covariance matrix, Set False is \code{x} is an nxp data matrix. By default, if \code{x} is symmetric, assume it is a covariance matrix.}
 
+\item{abs}{Flag to get max absolute value}
+
 \item{diag}{Flag to include diagonal entries in the max}
 }
 \description{
-Get the maximum absolute value of a covariance matrix.
+Get the maximum [absolute] value of a covariance matrix.
+}
+\details{
+This function is useful to determine the theoretical value for lambda_max - for Gaussian data, but may be a useful starting point in the general case as well.
+}
+\seealso{
+\code{\link{getLamPath}}
 }
 

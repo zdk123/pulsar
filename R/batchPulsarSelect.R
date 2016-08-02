@@ -49,6 +49,8 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #' \itemize{
 #'    \item stars (Stability approach to regularization selection)
 #'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
+#'    \item estrada (estrada class) see \code{\link{estrada.class}}
+#'    \item sufficiency (Ravikumar's sufficiency statistic)
 #' }
 #' @examples
 #' \dontrun{
@@ -91,7 +93,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     n <- nrow(data)
     p <- ncol(data)
     # min requirements for function args
-    knowncrits <- c("stars", "gcd")
+    knowncrits <- c("stars", "gcd", "estrada", "sufficiency")
     .lamcheck(fargs$lambda)
     .critcheck0(criterion, knowncrits)
     subsample.ratio <- .ratcheck(subsample.ratio, n)
@@ -147,16 +149,11 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         if (cleanup) unlink(regdir, recursive=TRUE)
         if (lb.est$opt.index == 1)
             warning("Accurate lower bound could not be determined with N=2 subsamples")
-        lb.est$opt.index <- lb.est$opt.index + 1 ## adjust
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
-            pmean <- pmin(sapply(lb.est$merge, function(x) {
-                             mean(triu(x, k=1))
-                            }), 1)
-
+            pmean <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
             ub.summary   <- cummax(4*pmean*(1-pmean))
-            ## adjust upper bound to exclude empty graphs
-            tmpub <- which.max(ub.summary >= thresh)[1] - 2
+            tmpub      <- .starsind(ub.summary, thresh, 1)
             if (any(ub.summary == 0))  ## adjust upper bound to exclude empty graphs
                 ub.index <- max(tmpub, max(which(ub.summary == 0))+1)
             else
@@ -177,7 +174,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         regdir <- gsub(paste("_", init, sep=""), "", regdir)
         # Run graph estimation on the rest of the subsamples
         isamp <- ind.sample[-(1:minN)]
-        out <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res, 
+        out   <- batchply(data, estFun, fun, fargs, isamp, regid, regdir, conffile, job.res, 
                         progressbar=progressbars)
         reg <- out$reg ; id  <- out$id
     }
@@ -209,8 +206,18 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         est$gcd <- gcd.stability(NULL, thresh, rep.num, p, nlams, gcdmerge)
      }
 
-    }
+      else if (crit == "estrada") {
+        if (!("stars" %in% criterion))
+            warning('Need StaRS for computing Estrada classes... not run')
+        else  est$estrada <- estrada.stability(est$stars$merge, thresh, rep.num, p, nlams)
+      }
 
+      else if (crit == "sufficiency") {
+        if (!("stars" %in% criterion)) warning('Need StaRS for computing sufficiency... not run')
+        else  est$sufficiency <- sufficiency(est$stars$merge, rep.num, p, nlams)
+      }
+
+    }
 
     if (lb.stars) {
       find <- 1:length(lb.est$summary)
@@ -221,17 +228,14 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
       tmpsumm[pind]  <- est$stars$summary
       est$stars$summary <- tmpsumm
 
-      est$stars$opt.index <- if (ub.index > 1) .starsind(tmpsumm[-(1:(ub.index-1))], thresh) + ub.index - 1
-                             else .starsind(tmpsumm, thresh)
-
-
       tmpmerg <- vector('list', length(lb.est$summary))
-      tmpmerg[p2ind] <- lb.est$merge[p2ind]
-      tmpmerg[pind]  <- est$stars$merge
+      tmpmerg[p2ind]  <- lb.est$merge[p2ind]
+      tmpmerg[pind]   <- est$stars$merge
       est$stars$merge <- tmpmerg
 
-      est$stars$lb.index <- lb.est$opt.index
-      est$stars$ub.index <- ub.index
+      est$stars$lb.index  <- lb.est$opt.index
+      est$stars$ub.index  <- ub.index
+      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
     }
 
     if (cleanup) unlink(regdir, recursive=TRUE)

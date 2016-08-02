@@ -1,5 +1,6 @@
 ---
 title: "Graphical model selection with pulsar"
+author: "Zachary D. Kurtz"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Graphical model selection with pulsar}
