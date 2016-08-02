@@ -49,8 +49,8 @@
 #' @param subsample.ratio determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.
 #' @param rep.num number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
-#' @param lb.stars Should the lower bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
-#' @param ub.stars Should the upper bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
+#' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
+#' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more paralellization options.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -142,7 +142,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
                               function(j) lb.premerge[[j]][[i]]))
         lb.est            <- stars.stability(lb.premerge.reord, thresh, minN, p)
         if (lb.est$opt.index == 1)
-            warning("Accurate lower bound could not be determine with N=2 subsamples")
+            warning("Accurate lower bound could not be determined with the first 2 subsamples")
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
             pmean <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
@@ -220,8 +220,10 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
     }
 
     if ("stars" %in% criterion) {
-        if (est$stars$opt.index == 1)
-            warning("Optimal lambda may not be included within the supplied path")
+        if (est$stars$opt.index == 1) {
+            direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
+            warning(paste("Optimal lambda may be", direction, "than the supplied values"))
+        }
     }
     est$call  <- match.call()
     est$envir <- parent.frame()

@@ -148,7 +148,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
         }
         if (cleanup) unlink(regdir, recursive=TRUE)
         if (lb.est$opt.index == 1)
-            warning("Accurate lower bound could not be determined with N=2 subsamples")
+            warning("Accurate lower bound could not be determined with the first 2 subsamples")
         if (ub.stars) {
             # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
             pmean <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
@@ -243,8 +243,10 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"
     est$reg <- reg
 
     if ("stars" %in% criterion) {
-        if (est$stars$opt.index == 1)
-            warning("Optimal lambda may not be included within the supplied path")
+        if (est$stars$opt.index == 1) {
+            direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
+            warning(paste("Optimal lambda may be", direction, "than the  supplied values"))
+        }
     }
     est$call  <- match.call()
     est$envir <- parent.frame()

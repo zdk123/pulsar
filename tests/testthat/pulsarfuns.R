@@ -30,8 +30,8 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         expect_warning(out <- pfun(dat$data, fun=fun, fargs=c(list(lambda=lams[1]), fargs), rep.num=2,
                        ...),"1 value")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=c(list(lams=lams), fargs), rep.num=2), "missing")
-        expect_warning(out <- pfun(dat$data, fun=fun, fargs=c(list(lambda=lams[4:5]), fargs), rep.num=2,
-                       ...), "supplied path")
+        expect_warning(out <- pfun(dat$data, fun=fun, fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=2,
+                       ...), "supplied values")
     })
 
     mlam <- signif(getMaxCov(dat$sigmahat)+.1, 3)
