@@ -34,7 +34,7 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #'    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
 #'    \item criterion: the stability criterion used
 #'    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
+#'    \item opt.ind: index (along the path) of optimal lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
 #'   }
 #' If \code{stars} is included as a criterion then additional arguments include
 #' \itemize{
@@ -50,7 +50,7 @@ getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
 #'    \item stars (Stability approach to regularization selection)
 #'    \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
 #'    \item estrada (estrada class) see \code{\link{estrada.class}}
-#'    \item sufficiency (Ravikumar's sufficiency statistic)
+#'    \item sufficiency (Tandon & Ravikumar's sufficiency statistic)
 #' }
 #' @examples
 #' \dontrun{

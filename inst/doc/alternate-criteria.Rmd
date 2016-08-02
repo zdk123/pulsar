@@ -1,26 +1,24 @@
 ---
-title: "Alternate selection criteria with pulsar"
+title: “Other selection criteria with pulsar"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Alternate selection criteria with pulsar}
+  %\VignetteIndexEntry{Other selection criteria with pulsar}
   %\VignetteEngine{knitr::rmarkdown}
 
   \usepackage[utf8]{inputenc}
 ---
 
-In addition to StARS-type edge stability, pulsar includes a few alternate criteria for graphical
-model learning/selection. By defining a few auxillary functions, these can be used to recreate some
-recently-published methods. These are currently implemented without a default method for actually
-selecting an optimal lambda, but as demonstrated above, these can be _ex post_ with a `pulsar`
-object.
-
+In addition to StARS’ edge stability and G-StARS’ induced subgraph stability, `pulsar` can 
+be used to compute other model selection criteria. By defining a few auxiliary functions, 
+`pulsar` can conveniently recapitulate a number of recently proposed selection criteria, e.g., 
+Tandon and Ravikumar’s sufficiency measure for hub discovery or Caballe et al.’s augmented AGNES scheme. 
 
 ## Learning Graphs with a few hubs
 
 Tandon & Ravikumar's [sufficiency criterion](http://jmlr.org/proceedings/papers/v32/tandon14.html)
-extends edge stability to identify hub and non-hub nodes. Graphs are learned from the neighborhoods
-of non-hub nodes only, but since hub nodes neighbor non-hubs, a complete graph can be learned with
-fewer samples. The paper includes sample complexity bounds for Ising graphical models. In this
+uses edge stability to identify hub and non-hub nodes. Graphs are learned from the neighborhoods
+of non-hub nodes only, but, since hub nodes neighbor non-hubs, an entire graph can be learned more accurately 
+with fewer samples. The paper includes sample complexity bounds for Ising graphical models. In this
 example, we generate correlated binary data for cheap (compared to Gibbs sampling) with Normal
 copula functions.
 
@@ -60,7 +58,7 @@ plot(lams, out$sufficiency$merge[1,], type='l', ylab="sufficiency")
 points(lams, out$sufficiency$merge[4,], type='l', col='red')
 ```
 
- Estimate the hub graph by identifying (algorithm 2 from the paper)
+ Estimate the hub graph by excluding hub nodes from neighborhood selection (algorithm 2 from the paper)
 ```{r, eval=TRUE}
 
   tandonest <- function(i, out, tu, tl) {
@@ -84,9 +82,9 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
 
 ## Augmented AGNES
 
-To replicate the augmented AGNES (A-AGNES) method of [Caballe et al 2016](http://arxiv.org/abs/1509.05326),
+To replicate the augmented AGNES (A-AGNES) method of [Caballe et al., 2016](http://arxiv.org/abs/1509.05326),
 use the node-wise dissimilarity metric (diss) and the AGNES algorithm as implemented in the 
-`cluster` package. A-AGNES selects the lambda that mimimizes the variance of the estimated diss +
+`cluster` package. A-AGNES selects the lambda that minimizes the variance of the estimated diss +
 the [squared] bias of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that
 has the maximum agglomerative coefficient over the path.
 

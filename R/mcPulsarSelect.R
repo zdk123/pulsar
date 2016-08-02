@@ -39,15 +39,15 @@
 
 #' pulsar: serial or parallel mode
 #'
-#' Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
+#' Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
 #'
 #' @param data A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model
 #' @param fun pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.
 #' @param fargs arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.
 #' @param criterion A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.
-#' @param thresh threshold for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.
-#' @param subsample.ratio determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.
-#' @param rep.num number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.
+#' @param thresh threshold (referred to as scalar \eqn{\beta} in StARS publication) for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.
+#' @param subsample.ratio determine the size of the subsamples (referred to as \eqn{b(n)/n}). Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.
+#' @param rep.num number of random subsamples \eqn{N} to take for graph re-estimation. Default is \eqn{N=20}, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
@@ -58,7 +58,7 @@
 #'    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
 #'    \item criterion: the stability criterion used
 #'    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-#'    \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
+#'    \item opt.ind: index (along the path) of optimal lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
 #'   }
 #' If \code{stars} is included as a criterion then additional arguments include
 #' \itemize{
@@ -74,7 +74,7 @@
 #'    \item diss  (Node-node dissimilarity) see \code{\link{graph.diss}}
 #'    \item estrada (estrada class) see \code{\link{estrada.class}}
 #'    \item nc  (natural connectivity) see \code{\link{natural.connectivity}}
-#'    \item sufficiency (Ravikumar's sufficiency statistic)
+#'    \item sufficiency (Tandon & Ravikumar's sufficiency statistic)
 #' }
 #' @examples
 #'\dontrun{

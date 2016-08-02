@@ -5,7 +5,7 @@
 
 #' Graph dissimilarity
 #'
-#' Dissimilarity matrix of a graph is here defined as the number of shared neighbors any two nodes.
+#' Dissimilarity matrix of a graph is here defined as the number of neighbors shared by any two nodes.
 #'
 #' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.
 #' @param sim Flag to return Graph similarity instead (1-dissimilarity)
@@ -139,9 +139,9 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
     }
 }
 
-#' Graphlet correlations vector
+#' Graphlet correlation vector
 #'
-#' Compute graphlet correlations over the desired orbits for a single graph \code{G}
+#' Compute graphlet correlations over the desired orbits (default is 11 non-redundant orbits of graphlets of size <=4) for a single graph \code{G}
 #' 
 #' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.
 #' @param orbind index vector for which orbits to use for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but 1 offset needed for R-style indexing.
@@ -206,15 +206,15 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 
 #' Estrada class
 #'
-#' Estrada proposes that Graphs can be classified in 1 of 4 classes. We call this the Estrada index.
+#' Estrada proposes that graphs can be classified into four different classes. We call this the Estrada class.
 #' These are:
-#'   I. Expander
+#'   I. Expander-like
 #'  II. Cluster
 #' III. Core-Periphery
 #' IV.  Mixed.
 #' @param G a \eqn{p*p} adjacency matrix of a Graph
 #' @param evthresh tolerance for a zero eigenvalue
-#' @return Estrada index (\eqn{1-4})
+#' @return Estrada class (\eqn{1-4})
 #' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 #' @export
 estrada.class <- function(G, evthresh=1e-3) {
