@@ -4,7 +4,7 @@ Version: 0.2.3
 Encoding: UTF-8
 Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
              person("Christian", "M\u00FCller", role = c("aut", "ctb"), email="cmueller@simonsfoundation.org"))
-Description: Model selection for L1-regularized graphical models using the Stability Approach to Regularization Selection ('StARS'), with options for speedups, batch computing, and alternate metrics (notably, graphlet stability).
+Description: Model selection for penalized graphical models using the Stability Approach to Regularization Selection ('StARS'), with options for speed-ups including Bounded StARS (B-StARS), batch computing, and other stability metrics (e.g., graphlet stability G-StARS).
 URL: http://github.com/zdk123/pulsar, http://arxiv.org/abs/1605.07072
 BugReports: http://github.com/zdk123/pulsar/issues
 Depends:
