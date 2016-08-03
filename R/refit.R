@@ -3,7 +3,7 @@
 #' Run the supplied graphical model function on the whole dataset and refit with the selected lambda(s)
 #'
 #' @param obj a fitted \code{pulsar} or \code{batch.pulsar} object
-#' @param criterion a character vector of criteria for refitting on full data. An optimal index must be defined for each criterion or a warning will displayed. If missing (no argument is supplied), try to refit for all pre-specified criteria.
+#' @param criterion a character vector of criteria for refitting on full data. An optimal index must be defined for each criterion or a message will displayed. If missing (no argument is supplied), try to refit for all pre-specified criteria.
 #' @details The \code{refit} call is evaluated in the environment specified by the \code{pulsar} or \code{batch.pulsar} object, so if any variables were used for arguments to the original call, unless they are purposefully updated, should not be altered. For example, if the variable for the original data is reassigned, the output of \code{refit} will not be on the original dataset.
 #' @return a \code{pulsar.refit} S3 object with members:
 #' \itemize{
@@ -55,8 +55,7 @@ refit.pulsar <- function(obj, criterion) {
         } else {
             est$refit[[crit]] <- NULL
             if (crit %in% names(obj)) {
-                warning(paste('No optimal index selected for', 
-                                crit, 'criterion', sep=" "), call.=FALSE)
+                message(paste('No optimal index selected for', crit, 'criterion', sep=" "))
             } else
                 warning(paste('Unknown criterion', crit, sep=" "), call.=FALSE)
         }

@@ -115,3 +115,5 @@ opt.index(out.diss, 'diss') <- which.min(varbias)
 fit.diss <- refit(out.diss)
 ```
 Feel free to request your favorite selection criterion to include with this package.
+
+## References

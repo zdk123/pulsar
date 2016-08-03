@@ -86,8 +86,8 @@ runcomptest <- function(msg, out, out.batch, ...) {
 
 testrefit <- function(desc, outb) {
     test_that(desc, {
-        expect_warning(fit1 <- refit(outb, "stars"), regexp = NA)
-        expect_warning(fit2 <- refit(outb, "gcd"), "No optimal index")
+        expect_message(fit1 <- refit(outb, "stars"), regexp = NA)
+        expect_message(fit2 <- refit(outb, "gcd"), "No optimal index")
         expect_equal(names(fit1$refit), "stars")
         expect_error(opt.index(outb, 'gcd') <- -1, "Index value")
         expect_error(opt.index(outb, 'gcd') <- get.opt.index(outb, 'gcd'), NA)

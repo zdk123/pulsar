@@ -136,7 +136,7 @@ We can use `pulsar` with a similar call. We can also parallelize this a bit for 
 
 ``` r
 quicargs <- list(lambda=lams)
-nc <- if (.Platform$OS.type == 'unix') 2 else 1
+nc    <- if (.Platform$OS.type == 'unix') 2 else 1
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
                 lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 ```
@@ -158,7 +158,7 @@ Compare model error by relative Hamming distances between refit adjacency matric
 plot(out.q2, scale=TRUE)
 ```
 
-![](http://i.imgur.com/RtQijsq.png)<!-- -->
+![plot of chunk unnamed-chunk-13](http://i.imgur.com/QY4nfZV.png)
 
 ``` r
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
@@ -177,7 +177,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 ```
 
-![](http://i.imgur.com/Yn6CuR4.png)<!-- -->
+![plot of chunk unnamed-chunk-14](http://i.imgur.com/JBEe4Z3.png)
 
 Batch Mode
 ----------

@@ -65,7 +65,7 @@ quicr <- function(data, lambda) {
 
 ## ---- eval=pulsarchunks--------------------------------------------------
 quicargs <- list(lambda=lams)
-nc <- if (.Platform$OS.type == 'unix') 2 else 1
+nc    <- if (.Platform$OS.type == 'unix') 2 else 1
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
                 lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 

@@ -98,7 +98,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
   }
 
   lams &lt;-<span class="st"> </span><span class="kw">getLamPath</span>(.<span class="dv">2</span>, .<span class="dv">005</span>, <span class="dv">30</span>)
-  out &lt;-<span class="st"> </span><span class="kw">pulsar</span>(X, ising.net, <span class="dt">fargs=</span><span class="kw">list</span>(<span class="dt">lambda=</span>lams), <span class="dt">criterion=</span><span class="kw">c</span>(<span class="st">'stars'</span>, <span class="st">'sufficiency'</span>),
+  out  &lt;-<span class="st"> </span><span class="kw">pulsar</span>(X, ising.net, <span class="dt">fargs=</span><span class="kw">list</span>(<span class="dt">lambda=</span>lams), <span class="dt">criterion=</span><span class="kw">c</span>(<span class="st">'stars'</span>, <span class="st">'sufficiency'</span>),
                <span class="dt">subsample.ratio=</span>.<span class="dv">6</span>, <span class="dt">rep.num=</span><span class="dv">60</span>, <span class="dt">seed=</span><span class="dv">10010</span>)</code></pre></div>
 <p>For non-hubs, the sufficiency metric should have a large dip in the regularization path while hub nodes are expected to be relatively flat:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(lams, out$sufficiency$merge[<span class="dv">1</span>,], <span class="dt">type=</span><span class="st">'l'</span>, <span class="dt">ylab=</span><span class="st">&quot;sufficiency&quot;</span>)
@@ -144,6 +144,9 @@ varbias  &lt;-<span class="st"> </span>out.diss$diss$summary +<span class="st"> 
 <span class="kw">opt.index</span>(out.diss, <span class="st">'diss'</span>) &lt;-<span class="st"> </span><span class="kw">which.min</span>(varbias)
 fit.diss &lt;-<span class="st"> </span><span class="kw">refit</span>(out.diss)</code></pre></div>
 <p>Feel free to request your favorite selection criterion to include with this package.</p>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2>References</h2>
 <div id="refs" class="references">
 <div id="ref-Caballe:2015">
 <p>Caballe, Adria, Natalia Bochkina, and Claus Mayer. 2015. “Selection of the Regularization Parameter in Graphical Models Using Network Characteristics.”</p>

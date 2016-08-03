@@ -9,7 +9,7 @@ refit(obj, criterion)
 \arguments{
 \item{obj}{a fitted \code{pulsar} or \code{batch.pulsar} object}
 
-\item{criterion}{a character vector of criteria for refitting on full data. An optimal index must be defined for each criterion or a warning will displayed. If missing (no argument is supplied), try to refit for all pre-specified criteria.}
+\item{criterion}{a character vector of criteria for refitting on full data. An optimal index must be defined for each criterion or a message will displayed. If missing (no argument is supplied), try to refit for all pre-specified criteria.}
 }
 \value{
 a \code{pulsar.refit} S3 object with members:

@@ -10,6 +10,10 @@ vignette: >
 bibliography: ../inst/gstars.bib
 ---
 
+```{r, eval=TRUE, echo=FALSE}
+library(pulsar)
+```
+
 In addition to StARS' edge stability and G-StARS' induced subgraph stability, `pulsar` can 
 be used to compute other model selection criteria. By defining a few auxiliary functions, 
 `pulsar` can conveniently recapitulate a number of recently proposed selection criteria, e.g., 
@@ -48,7 +52,7 @@ copula functions.
   }
 
   lams <- getLamPath(.2, .005, 30)
-  out <- pulsar(X, ising.net, fargs=list(lambda=lams), criterion=c('stars', 'sufficiency'),
+  out  <- pulsar(X, ising.net, fargs=list(lambda=lams), criterion=c('stars', 'sufficiency'),
                subsample.ratio=.6, rep.num=60, seed=10010)
 ```
 
@@ -111,3 +115,5 @@ opt.index(out.diss, 'diss') <- which.min(varbias)
 fit.diss <- refit(out.diss)
 ```
 Feel free to request your favorite selection criterion to include with this package.
+
+## References

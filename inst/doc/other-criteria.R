@@ -1,3 +1,6 @@
+## ---- eval=TRUE, echo=FALSE----------------------------------------------
+library(pulsar)
+
 ## ---- eval=TRUE----------------------------------------------------------
   p <- 40
   n <- round(8*p * log(p))
@@ -21,7 +24,7 @@
   }
 
   lams <- getLamPath(.2, .005, 30)
-  out <- pulsar(X, ising.net, fargs=list(lambda=lams), criterion=c('stars', 'sufficiency'),
+  out  <- pulsar(X, ising.net, fargs=list(lambda=lams), criterion=c('stars', 'sufficiency'),
                subsample.ratio=.6, rep.num=60, seed=10010)
 
 ## ---- eval=TRUE, fig.width=7, fig.height=5-------------------------------

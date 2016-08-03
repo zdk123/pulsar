@@ -52,7 +52,6 @@ install.packages('pulsar')
 library(pulsar)
 ```
 
-
 ## Basic usage
 
 For this readme, we will use synthetic data generated from the `huge` package.
@@ -131,7 +130,7 @@ We can use `pulsar` with a similar call. We can also parallelize this a bit for 
 machines by specifying `ncores` (which wraps `mclapply` in the parallel package).
 ```{r, eval=pulsarchunks}
 quicargs <- list(lambda=lams)
-nc <- if (.Platform$OS.type == 'unix') 2 else 1
+nc    <- if (.Platform$OS.type == 'unix') 2 else 1
 out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
                 lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
 ```
