@@ -7,6 +7,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 
   \usepackage[utf8]{inputenc}
+bibliography: ../inst/gstars.bib
 ---
 
 ```{r, echo = FALSE, eval=TRUE}
@@ -17,6 +18,7 @@ knitr::opts_chunk$set(
 library(pulsar)
 pulsarchunks = TRUE
 getconfig    = TRUE
+README       = FALSE
 ```
 
 ```{r, child=file.path(system.file(package="pulsar"), "CONTENT.Rmd"), out.width="680px"}

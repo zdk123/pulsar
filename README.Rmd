@@ -1,5 +1,13 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+<!--pandoc
+s:
+t: markdown_github
+bibliography: inst/gstars.bib
+o: README.md
+-->
+
+
 ```{r, echo = FALSE, eval=TRUE}
 opts_knit$set(
   upload.fun = function(file) imgur_upload(file, "ce3138fd1186b7d"), 
@@ -10,7 +18,9 @@ knitr::opts_chunk$set(
 )
 pulsarchunks = TRUE
 getconfig    = FALSE
+README       = TRUE
 ```
+# pulsar: Parallelized Utilities for Lambda Selection Along a Regularization path
 [![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
 ```{r, child=file.path(system.file(package="pulsar"), "CONTENT.Rmd")}

@@ -17,7 +17,7 @@ graph.diss(G, sim = FALSE, loops = FALSE)
 a \eqn{p*p} dissimilarity matrix
 }
 \description{
-Dissimilarity matrix of a graph is here defined as the number of shared neighbors any two nodes.
+Dissimilarity matrix of a graph is here defined as the number of neighbors shared by any two nodes.
 }
 \references{
 Bochkina, N. (2015). Selection of the Regularization Parameter in Graphical Models using a Priori Knowledge of Network Structure, arXiv: 1509.05326.

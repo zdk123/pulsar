@@ -17,17 +17,17 @@ pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
 
 \item{criterion}{A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.}
 
-\item{thresh}{threshold for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.}
+\item{thresh}{threshold (referred to as scalar \eqn{\beta} in StARS publication) for selection criterion. Only implemented for StARS. \code{thresh=0.1} is recommended.}
 
-\item{subsample.ratio}{determine the size of the subsamples. Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.}
+\item{subsample.ratio}{determine the size of the subsamples (referred to as \eqn{b(n)/n}). Default is 10*sqrt(n)/n for n > 144 or 0.8 otherwise. Should be strictly less than 1.}
 
-\item{rep.num}{number of random subsamples to take for graph re-estimation. Default is 20, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.}
+\item{rep.num}{number of random subsamples \eqn{N} to take for graph re-estimation. Default is \eqn{N=20}, but more is recommended for non-StARS criteria or if using edge frequencies as confidence scores.}
 
 \item{seed}{A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.}
 
-\item{lb.stars}{Should the lower bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
+\item{lb.stars}{Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.}
 
-\item{ub.stars}{Should the upper bound be computed after \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
+\item{ub.stars}{Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
 \item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more paralellization options.}
 }
@@ -37,7 +37,7 @@ an S3 object of class \code{pulsar} with a named member for each stability metri
    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
    \item criterion: the stability criterion used
    \item merge: the raw statistic over the \code{rep.num} graphs, prior to summarization
-   \item opt.ind: optimal index of lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
+   \item opt.ind: index (along the path) of optimal lambda selected by the criterion at the desired threshold. Will return \eqn{0} if no optimum is found or \code{NULL} if selection for the criterion is not implemented.
   }
 If \code{stars} is included as a criterion then additional arguments include
 \itemize{
@@ -48,7 +48,7 @@ If \code{stars} is included as a criterion then additional arguments include
 call: the original function call
 }
 \description{
-Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
+Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
 }
 \details{
 The options for \code{criterion} statistics are:
@@ -58,7 +58,7 @@ The options for \code{criterion} statistics are:
    \item diss  (Node-node dissimilarity) see \code{\link{graph.diss}}
    \item estrada (estrada class) see \code{\link{estrada.class}}
    \item nc  (natural connectivity) see \code{\link{natural.connectivity}}
-   \item sufficiency (Ravikumar's sufficiency statistic)
+   \item sufficiency (Tandon & Ravikumar's sufficiency statistic)
 }
 }
 \examples{

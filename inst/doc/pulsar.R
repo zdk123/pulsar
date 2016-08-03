@@ -6,17 +6,25 @@ knitr::opts_chunk$set(
 library(pulsar)
 pulsarchunks = TRUE
 getconfig    = TRUE
+README       = FALSE
 
-## ---- eval=FALSE---------------------------------------------------------
+## ---- eval=FALSE, echo=README--------------------------------------------
 #  library(devtools)
 #  install_github("zdk123/pulsar")
+#  library(pulsar)
+
+## ---- eval=FALSE, echo=!README-------------------------------------------
+#  install.packages('pulsar')
+#  ## uncomment below for the dev version
+#  # library(devtools)
+#  # install_github("zdk123/pulsar")
 #  library(pulsar)
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 2000
-dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.35)
+p <- 40 ; n <- 3000
+dat  <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.5)
 lmax <- getMaxCov(dat$sigmahat)
 lams <- getLamPath(lmax, lmax*.05, len=40)
 
@@ -82,7 +90,7 @@ gcdnet   <- network(summary(fit.q2$refit$gcd))
 par(mfrow=c(1,3))
 coords <- plot(truenet, usearrows=FALSE, main="TRUE")
 plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
-plot(gcdnet, coord=coords, usearrows=FALSE, main="StARS+GCD")
+plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 
 ## ---- eval=getconfig-----------------------------------------------------
 url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"

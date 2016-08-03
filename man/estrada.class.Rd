@@ -12,12 +12,12 @@ estrada.class(G, evthresh = 0.001)
 \item{evthresh}{tolerance for a zero eigenvalue}
 }
 \value{
-Estrada index (\eqn{1-4})
+Estrada class (\eqn{1-4})
 }
 \description{
-Estrada proposes that Graphs can be classified in 1 of 4 classes. We call this the Estrada index.
+Estrada proposes that graphs can be classified into four different classes. We call this the Estrada class.
 These are:
-  I. Expander
+  I. Expander-like
  II. Cluster
 III. Core-Periphery
 IV.  Mixed.

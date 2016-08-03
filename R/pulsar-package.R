@@ -109,7 +109,8 @@ NULL
 #'          path <-lapply(1:n, function(i) as(tmp$beta[,i,drop=FALSE], "lgCMatrix"))
 #'          list(path=path)
 #' }
-#' ## can be use as a different way of stability selection for linear models (DIFFERENT from hdi package)
+#'
+#' ## alternative stability selection (DIFFERENT from hdi package)
 #' out <- pulsar(dat$data, lasso, fargs=list(lambda=lam))
 #' mergmat <- do.call('cbind', tmp$stars$merge)
 #' image(mergmat)

@@ -47,13 +47,14 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
   ## Symmetrize
   net <- sign(t(net) + net)
 
-## ---- eval=pulsarchunks, warning=FALSE, message=FALSE--------------------
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, 
-                    criterion='diss', seed=10010, ncores=nc)
+## ---- eval=TRUE, warning=FALSE, message=FALSE----------------------------
+out.diss  <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
+                    rep.num=20, criterion='diss')
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
+library(cluster)
+acfun <- function(x) agnes(x, diss=TRUE)$ac
 ac <- sapply(path.diss, acfun)
 ac.sel <- out.diss$diss$merge[[which.max(ac)]]
 

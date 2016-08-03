@@ -7,7 +7,7 @@
 Correctly specify a function for graphical model estimation that is compatible with the pulsar package.
 }
 \details{
-It is easy to construct your own function for a penalized linear model that can be used with this package. The R function must have correctly specified inputs and outputs and is passed into the \code{fun} argument to \code{\link{pulsar}} or \code{\link{batch.pulsar}}. Any function that doesn't follow these rules will fail to give the desired output and may trigger an error.
+It is easy to construct your own function for penalized model estimation that can be used with this package. The R function must have correctly specified inputs and outputs and is passed into the \code{fun} argument to \code{\link{pulsar}} or \code{\link{batch.pulsar}}. Any function that does not follow these rules will fail to give the desired output and may trigger an error.
 
 These packages on CRAN have functions that work out of the box, so you won't need to construct a wrapper:
 
@@ -21,11 +21,11 @@ These packages on CRAN have functions that work out of the box, so you won't nee
 Inputs:
 
 The function may take arbitrary, named arguments but the first argument must be the data \eqn{n*p} data matrix with the \eqn{n} samples in rows and \eqn{p} features in the columns.
-At least one argument must be named "lambda", which is expected to be a decreasing numeric vector of penalties. The non-data arguments should be passed into \code{\link{pulsar}} or \code{\link{batch.pulsar}} as a named list (the names much match function arguments exactly) to the \code{fargs} argument.
+At least one argument must be named "lambda", which is expected to be a decreasing numeric vector of penalties. The non-data arguments should be passed into \code{\link{pulsar}} or \code{\link{batch.pulsar}} as a named list (the names must match function arguments exactly) to the \code{fargs} argument.
 
 Outputs:
 
-The output from the function must be a list or another S3 object inherited from a list. At least one member must be named \code{path}. This \code{path} object itself must be a list of \eqn{p*p} adjacency matrices, one for each value of lambda. Each cell in the adjacency matrix contains a 1 or TRUE if there is an edge between two nodes or 0/FALSE otherwise. It is highly recommended (though not enforced by \pkg{pulsar}) that each adjacency matrix be a column-orientic, compressed sparse matrix from the \pkg{Matrix} package. For example \code{dgCMatrix}/\code{dsCMatrix} (general/symmetric numeric Matrix) or the 1-bit \code{lgCMatrix}/\code{lsCMatrix} classes.
+The output from the function must be a list or another S3 object inherited from a list. At least one member must be named \code{path}. This \code{path} object itself must be a list of \eqn{p*p} adjacency matrices, one for each value of lambda. Each cell in the adjacency matrix contains a 1 or TRUE if there is an edge between two nodes or 0/FALSE otherwise. It is highly recommended (though not enforced by \pkg{pulsar}) that each adjacency matrix be a column-oriented, compressed, sparse matrix from the \pkg{Matrix} package. For example, \code{dgCMatrix}/\code{dsCMatrix} (general/symmetric numeric Matrix) or the 1-bit \code{lgCMatrix}/\code{lsCMatrix} classes.
 The function may return other named outputs, but these will be ignored.
 }
 \examples{
@@ -93,7 +93,8 @@ lasso <- function(data, lambda, respind=1, family="gaussian", ...) {
          path <-lapply(1:n, function(i) as(tmp$beta[,i,drop=FALSE], "lgCMatrix"))
          list(path=path)
 }
-## can use this instead of stability selection/hdi package
+
+## alternative stability selection (DIFFERENT from hdi package)
 out <- pulsar(dat$data, lasso, fargs=list(lambda=lam))
 mergmat <- do.call('cbind', tmp$stars$merge)
 image(mergmat)

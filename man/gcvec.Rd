@@ -2,7 +2,7 @@
 % Please edit documentation in R/graphFeatures.R
 \name{gcvec}
 \alias{gcvec}
-\title{Graphlet correlations vector}
+\title{Graphlet correlation vector}
 \usage{
 gcvec(G, orbind = c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1) + 1)
 }
@@ -12,7 +12,7 @@ gcvec(G, orbind = c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1) + 1)
 \item{orbind}{index vector for which orbits to use for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but 1 offset needed for R-style indexing.}
 }
 \description{
-Compute graphlet correlations over the desired orbits for a single graph \code{G}
+Compute graphlet correlations over the desired orbits (default is 11 non-redundant orbits of graphlets of size <=4) for a single graph \code{G}
 }
 \references{
 Hočevar, T., & Demšar, J. (2014). A combinatorial approach to graphlet counting. Bioinformatics (Oxford, England), 30(4), 559–65. doi:10.1093/bioinformatics/btt717

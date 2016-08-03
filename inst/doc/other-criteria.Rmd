@@ -1,21 +1,23 @@
 ---
-title: “Other selection criteria with pulsar"
+title: "Other selection criteria with pulsar"
+author: "Zachary D. Kurtz"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Other selection criteria with pulsar}
   %\VignetteEngine{knitr::rmarkdown}
 
   \usepackage[utf8]{inputenc}
+bibliography: ../inst/gstars.bib
 ---
 
-In addition to StARS’ edge stability and G-StARS’ induced subgraph stability, `pulsar` can 
+In addition to StARS' edge stability and G-StARS' induced subgraph stability, `pulsar` can 
 be used to compute other model selection criteria. By defining a few auxiliary functions, 
 `pulsar` can conveniently recapitulate a number of recently proposed selection criteria, e.g., 
-Tandon and Ravikumar’s sufficiency measure for hub discovery or Caballe et al.’s augmented AGNES scheme. 
+@Tandon2014's sufficiency measure for hub discovery or @Caballe:2015's augmented AGNES scheme. 
 
 ## Learning Graphs with a few hubs
 
-Tandon & Ravikumar's [sufficiency criterion](http://jmlr.org/proceedings/papers/v32/tandon14.html)
+The sufficiency criterion defined by @Tandon2014
 uses edge stability to identify hub and non-hub nodes. Graphs are learned from the neighborhoods
 of non-hub nodes only, but, since hub nodes neighbor non-hubs, an entire graph can be learned more accurately 
 with fewer samples. The paper includes sample complexity bounds for Ising graphical models. In this
@@ -82,19 +84,20 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
 
 ## Augmented AGNES
 
-To replicate the augmented AGNES (A-AGNES) method of [Caballe et al., 2016](http://arxiv.org/abs/1509.05326),
+To replicate the augmented AGNES (A-AGNES) method of @Caballe:2015,
 use the node-wise dissimilarity metric (diss) and the AGNES algorithm as implemented in the 
 `cluster` package. A-AGNES selects the lambda that minimizes the variance of the estimated diss +
 the [squared] bias of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that
 has the maximum agglomerative coefficient over the path.
 
-```{r, eval=pulsarchunks, warning=FALSE, message=FALSE}
-out.diss  <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, 
-                    criterion='diss', seed=10010, ncores=nc)
+```{r, eval=TRUE, warning=FALSE, message=FALSE}
+out.diss  <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
+                    rep.num=20, criterion='diss')
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
-acfun <- function(x) cluster::agnes(x, diss=TRUE)$ac
+library(cluster)
+acfun <- function(x) agnes(x, diss=TRUE)$ac
 ac <- sapply(path.diss, acfun)
 ac.sel <- out.diss$diss$merge[[which.max(ac)]]
 
@@ -107,5 +110,4 @@ varbias  <- out.diss$diss$summary + dissbias
 opt.index(out.diss, 'diss') <- which.min(varbias)
 fit.diss <- refit(out.diss)
 ```
-
 Feel free to request your favorite selection criterion to include with this package.
