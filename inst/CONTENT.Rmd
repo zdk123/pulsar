@@ -6,7 +6,7 @@
 * [Custom methods](#using-a-custom-graphical-model-method)
 * [Graphlet stability](#graphlet-stability)
 * [Batch Mode](#batch-mode)
-* [Notes](#a-few-notes-on-batch-mode-pulsar)
+  * [Notes](#notes-on-batch-mode)
 * [References](#references)
 
 ## Introduction
