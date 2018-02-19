@@ -43,4 +43,3 @@ out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
 fit  <- refit(out.p)
 }
 }
-

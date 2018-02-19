@@ -24,4 +24,3 @@ This function is useful to determine the theoretical value for lambda_max - for 
 \seealso{
 \code{\link{getLamPath}}
 }
-

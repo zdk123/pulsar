@@ -1,7 +1,7 @@
 #' @keywords internal
 .lamcheck <- function(lams) {
     if (is.null(lams)) {
-        stop(paste('Error: missing members in fargs:', 
+        stop(paste('Error: missing members in fargs:',
              paste(c('lambda')[c(is.null(lams))])))
     } else {
         if (!all(lams == cummin(lams)))
@@ -24,17 +24,17 @@
 #' @keywords internal
 .critcheck0 <- function(criterion, knowncrits) {
     if (!all(criterion %in% knowncrits)) {
-       stop(paste('Unknown criterion', paste(criterion[!(criterion %in% knowncrits)], 
+       stop(paste('Unknown criterion', paste(criterion[!(criterion %in% knowncrits)],
                    collapse=", "), sep=": "))
     }
     starsdepend <- c("estrada", "sufficiency")
     if (any(starsdepend %in% knowncrits)) {
         if (any(starsdepend %in% criterion) && !("stars" %in% criterion)) {
-             stop(paste('Criterion: ', paste(starsdepend[starsdepend %in% criterion], 
+             stop(paste('Criterion: ', paste(starsdepend[starsdepend %in% criterion],
                    collapse=", "), ' cannot be run unless stars is also a selected criterion', sep=""))
         }
     }
-    
+
 }
 
 #' pulsar: serial or parallel mode
@@ -83,7 +83,7 @@
 #' p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 #' lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
-#' 
+#'
 #' ## Run pulsar with huge
 #' hugeargs <- list(lambda=lams, verbose=FALSE)
 #' out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
@@ -102,89 +102,94 @@
 #' @references Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
 #' @seealso \code{\link{batch.pulsar}}
 #' @export
-pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thresh = 0.1,
-                   subsample.ratio = NULL, rep.num = 20, seed=NULL,
-                   lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
-    gcinfo(FALSE)
-    n <- nrow(data)
-    p <- ncol(data)
-    # min requirements for function args
-    .lamcheck(fargs$lambda)
+pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
+                  thresh = 0.1, subsample.ratio = NULL, rep.num = 20, seed=NULL,
+                  lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
+  gcinfo(FALSE)
+  n <- nrow(data)
+  p <- ncol(data)
+  # min requirements for function args
+  .lamcheck(fargs$lambda)
+  nlams <- length(fargs$lambda)
+  knowncrits <- c("stars", "diss", "estrada", "gcd", "nc", "sufficiency") #"vgraphlet", "egraphlet",
+  .critcheck0(criterion, knowncrits)
+  subsample.ratio <- .ratcheck(subsample.ratio, n)
+
+  if (!is.null(seed)) set.seed(seed)
+  ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio),
+                  replace = FALSE), simplify=FALSE)
+  if (!is.null(seed)) set.seed(NULL)
+  estFun <- function(ind.sample, fargs) {
+    tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
+    if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member')
+    return(tmp$path)
+  }
+
+  if (lb.stars) {
+    if (!("stars" %in% criterion))
+      stop('Lower/Upper bound method must be used with StARS')
+    minN <- 2 # Hard code for now
+  } else
+      minN <- rep.num
+
+  isamp <- ind.sample[1:minN]
+  ## TODO: set global options for mc.* args to parallel::mclapply
+  premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+
+
+  if (lb.stars) {
+    lb.premerge       <- premerge
+    lb.premerge.reord <- lapply(1:nlams, function(i)
+                         lapply(1:minN,  function(j) lb.premerge[[j]][[i]]))
+
+    lb.est <- stars.stability(lb.premerge.reord, thresh, minN, p)
+    if (lb.est$opt.index == 1)
+      warning("Accurate lower bound could not be determined with the first 2 subsamples")
+    if (ub.stars) {
+      # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
+      pmean      <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
+      ub.summary <- cummax(4*pmean*(1-pmean))
+      tmpub      <- .starsind(ub.summary, thresh, 1)
+      if (any(ub.summary == 0))  ## adjust upper bound to exclude empty graphs
+        ub.index <- max(tmpub, max(which(ub.summary == 0))+1)
+      else
+        ub.index <- max(tmpub, 1)
+    } else ub.index <- 1
+    # reselect lambda between bounds
+    fargs$lambda <- fargs$lambda[ub.index:lb.est$opt.index]
     nlams <- length(fargs$lambda)
-    knowncrits <- c("stars", "diss", "estrada", "gcd", "nc", "sufficiency") #"vgraphlet", "egraphlet",
-    .critcheck0(criterion, knowncrits)
-    subsample.ratio <- .ratcheck(subsample.ratio, n)
+    lb.premerge  <- lapply(lb.premerge,
+                           function(ppm) ppm[ub.index:lb.est$opt.index])
+    isamp <- ind.sample[-(1:minN)]
+    tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+    premerge <- c(lb.premerge, tmp)
+  }
 
-    if (!is.null(seed)) set.seed(seed)
-    ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio), 
-                    replace = FALSE), simplify=FALSE)
-    if (!is.null(seed)) set.seed(NULL)
-    estFun <- function(ind.sample, fargs) {
-        tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
-        if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member') 
-        return(tmp$path)
+  premerge.reord <- lapply(1:nlams, function(i)
+                    lapply(1:rep.num, function(j) premerge[[j]][[i]]))
+  rm(premerge) ; gc()
+  est <- list()
+
+  for (i in 1:length(criterion)) {
+    crit <- criterion[i]
+
+    if (crit == "stars")
+      est$stars <- stars.stability(premerge.reord, thresh, rep.num, p)
+
+    else if (crit == "diss")
+      est$diss <-  diss.stability(premerge.reord, thresh, rep.num, p, nlams)
+
+    else if (crit == "estrada") {
+      if (!("stars" %in% criterion))
+        warning('Need StaRS for computing Estrada classes... not run')
+      else
+        est$estrada <- estrada.stability(est$stars$merge,thresh,rep.num,p,nlams)
     }
 
-    if (lb.stars) {
-        if (!("stars" %in% criterion)) # || length(criterion)>1)
-            stop('Lower/Upper bound method must be used with StARS')
-        minN <- 2 # Hard code for now
-    } else
-        minN <- rep.num
-
-    isamp <- ind.sample[1:minN]
-    premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
-
-
-    if (lb.stars) {
-        lb.premerge       <- premerge
-        lb.premerge.reord <- lapply(1:nlams, function(i) lapply(1:minN, 
-                              function(j) lb.premerge[[j]][[i]]))
-        lb.est            <- stars.stability(lb.premerge.reord, thresh, minN, p)
-        if (lb.est$opt.index == 1)
-            warning("Accurate lower bound could not be determined with the first 2 subsamples")
-        if (ub.stars) {
-            # upper bound is determined by equivilent of MaxEnt of Poisson Binomial
-            pmean <- sapply(lb.est$merge, function(x) { sum(x)/(p*(p-1)) })
-            ub.summary <- cummax(4*pmean*(1-pmean))
-            tmpub      <- .starsind(ub.summary, thresh, 1)
-            if (any(ub.summary == 0))  ## adjust upper bound to exclude empty graphs
-                ub.index <- max(tmpub, max(which(ub.summary == 0))+1)
-            else
-                ub.index <- max(tmpub, 1)
-        } else ub.index <- 1
-        # reselect lambda between bounds
-        fargs$lambda <- fargs$lambda[ub.index:lb.est$opt.index]
-        nlams <- length(fargs$lambda)
-        lb.premerge  <- lapply(lb.premerge, function(ppm) ppm[ub.index:lb.est$opt.index])
-        isamp <- ind.sample[-(1:minN)]
-        tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
-        premerge     <- c(lb.premerge, tmp)
+    else if (crit == "sufficiency") {
+      if (!("stars" %in% criterion)) warning('Need StaRS for computing sufficiency... not run')
+      else  est$sufficiency <- sufficiency(est$stars$merge, rep.num, p, nlams)
     }
-
-    premerge.reord <- lapply(1:nlams, function(i) lapply(1:rep.num, function(j) premerge[[j]][[i]]))
-    rm(premerge) ; gc()
-    est <- list()
-    
-    for (i in 1:length(criterion)) {
-      crit <- criterion[i]
-
-      if (crit == "stars")
-        est$stars <- stars.stability(premerge.reord, thresh, rep.num, p)
-
-      else if (crit == "diss")
-        est$diss <-  diss.stability(premerge.reord, thresh, rep.num, p, nlams)
-
-      else if (crit == "estrada") {
-        if (!("stars" %in% criterion))
-            warning('Need StaRS for computing Estrada classes... not run')
-        else  est$estrada <- estrada.stability(est$stars$merge, thresh, rep.num, p, nlams)
-      }
-
-      else if (crit == "sufficiency") {
-        if (!("stars" %in% criterion)) warning('Need StaRS for computing sufficiency... not run')
-        else  est$sufficiency <- sufficiency(est$stars$merge, rep.num, p, nlams)
-      }
 
 #      else if (crit == "egraphlet")
 #        est$egraphlet <- egraphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
@@ -192,42 +197,42 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"), thr
 #      else if (crit == "vgraphlet")
 #        est$vgraphlet <- vgraphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-      else if (crit == "gcd")
-        est$gcd <- gcd.stability(premerge.reord, thresh, rep.num, p, nlams)
+    else if (crit == "gcd")
+      est$gcd <- gcd.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-      else if (crit == "nc")
-        est$nc <- nc.stability(premerge.reord, thresh, rep.num, p, nlams)
+    else if (crit == "nc")
+      est$nc <- nc.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-    }
+  }
 
-    if (lb.stars) {
-      find <- 1:length(lb.est$summary)
-      pind <- ub.index:lb.est$opt.index
-      p2ind <- setdiff(find, pind)
-      tmpsumm <- vector('numeric', length(lb.est$summary))
-      tmpsumm[p2ind] <- lb.est$summary[p2ind]
-      tmpsumm[pind]  <- est$stars$summary
-      est$stars$summary   <- tmpsumm
+  if (lb.stars) {
+    find <- 1:length(lb.est$summary)
+    pind <- ub.index:lb.est$opt.index
+    pinv <- setdiff(find, pind)
+    tmpsumm <- vector('numeric', length(lb.est$summary))
+    tmpsumm[pinv] <- lb.est$summary[pinv]
+    tmpsumm[pind] <- est$stars$summary
+    est$stars$summary   <- tmpsumm
 
-      tmpmerg <- vector('list', length(lb.est$summary))
-      tmpmerg[p2ind]  <- lb.est$merge[p2ind]
-      tmpmerg[pind]   <- est$stars$merge
-      est$stars$merge <- tmpmerg
+    tmpmerg <- vector('list', length(lb.est$summary))
+    tmpmerg[pinv]   <- lb.est$merge[pinv]
+    tmpmerg[pind]   <- est$stars$merge
+    est$stars$merge <- tmpmerg
 
-      est$stars$lb.index  <- lb.est$opt.index
-      est$stars$ub.index  <- ub.index #min(, est$stars$opt.index)
-      est$stars$opt.index <- est$stars$opt.index + ub.index - 1
-    }
+    est$stars$lb.index  <- lb.est$opt.index
+    est$stars$ub.index  <- ub.index #min(, est$stars$opt.index)
+    est$stars$opt.index <- est$stars$opt.index + ub.index - 1
+  }
 
-    if ("stars" %in% criterion) {
-        if (est$stars$opt.index == 1) {
-            direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
-            warning(paste("Optimal lambda may be", direction, "than the supplied values"))
-        }
-    }
-    est$call  <- match.call()
-    est$envir <- parent.frame()
-    return(structure(est, class="pulsar"))
+  if ("stars" %in% criterion) {
+      if (est$stars$opt.index == 1) {
+          direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
+          warning(paste("Optimal lambda may be", direction, "than the supplied values"))
+      }
+  }
+  est$call  <- match.call()
+  est$envir <- parent.frame()
+  return(structure(est, class="pulsar"))
 }
 
 #' @keywords internal
@@ -240,19 +245,22 @@ stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL) {
     if (is.null(stars.thresh)) stars.thresh <- 0.1
     est <- list()
 
-    if (is.null(merge)) {
-        est$merge <- lapply(premerge, function(x) Reduce("+", x))
-        gc() # flush
-    } else est$merge <- merge
 
+    # do.call(batchtools::reduceResults,
+    #                  c(list(reg=reg, fun=starsaggfun), reduceargs))
+
+    if (is.null(merge)) {
+      est$merge <- lapply(premerge, function(x) Reduce("+", x))
+      gc() # flush
+    } else est$merge <- merge
     est$summary <- rep(0, length(est$merge))
 
     for (i in 1:length(est$merge)) {
-        est$merge[[i]] <- est$merge[[i]]/rep.num
-        est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) / (p * (p - 1))
+      est$merge[[i]] <- est$merge[[i]]/rep.num
+      est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) / (p * (p - 1))
     }
     ## monotonize variability
-    est$summary <- cummax(est$summary)
+    est$summary   <- cummax(est$summary)
     est$opt.index <- .starsind(est$summary, stars.thresh)
     est$criterion <- "stars.stability"
     est$thresh    <- stars.thresh
@@ -339,16 +347,13 @@ nc.stability <- function(premerge, thresh, rep.num, p, nlams) {
 #' @keywords internal
 gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL) {
     est <- list()
-    if (is.null(merge)) {
+    if (is.null(merge))
         est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcvec))))
-    } else {
+    else
         est$merge <- merge
-    }
 
     est$summary <- vector('numeric', nlams)
-    for (i in 1:nlams) {
-        est$summary[i] <- mean(est$merge[[i]])
-    }
+    for (i in 1:nlams) est$summary[i] <- mean(est$merge[[i]])
 
     est$criterion <- "graphlet.stability"
     return(est)
@@ -359,7 +364,7 @@ gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL) {
 ##    estrlist    <- lapply(premerge.reord, function(pm) lapply(pm, estrada))
 ##    est$merge <- lapply(estrlist, function(estrvec) Reduce("+", estrvec)/rep.num)
 #    collect <- lapply(premerge, function(pm) lapply(pm, egraphletlist))
-#    collect.reord <- lapply(collect, function(colam) lapply(1:norbs, function(i) 
+#    collect.reord <- lapply(collect, function(colam) lapply(1:norbs, function(i)
 #                      lapply(1:rep.num, function(j) colam[[j]][[i]])))
 #    rm(list=c('collect')) ; gc()
 #    est$merge <- vector('list', nlams)

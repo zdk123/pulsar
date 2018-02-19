@@ -39,4 +39,3 @@ out.b <- update(out.p, lb.stars=TRUE, ub.stars=TRUE)
 \seealso{
 \code{eval}, \code{\link{update}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 }
-

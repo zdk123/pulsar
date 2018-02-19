@@ -19,4 +19,3 @@ Hočevar, T., & Demšar, J. (2014). A combinatorial approach to graphlet countin
 
 Yaveroğlu, Ö. N., Malod-Dognin, N., Davis, D., Levnajic, Z., Janjic, V., Karapandza, R., … Pržulj, N. (2014). Revealing the hidden language of complex networks. Scientific Reports, 4, 4547. doi:10.1038/srep04547
 }
-

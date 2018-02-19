@@ -50,9 +50,10 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
   ## Symmetrize
   net <- sign(t(net) + net)
 
-## ---- eval=TRUE, warning=FALSE, message=FALSE----------------------------
+## ---- eval=TRUE, warning=FALSE, message=FALSE, fig.width=7, fig.height=5----
+dat <- huge.generator(n, p, 'hub', verbose=FALSE, v=.1, u=.4)
 out.diss  <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
-                    rep.num=20, criterion='diss')
+                    rep.num=20, criterion=c('diss', 'stars'))
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
@@ -69,4 +70,9 @@ varbias  <- out.diss$diss$summary + dissbias
 ## Select the index and refit
 opt.index(out.diss, 'diss') <- which.min(varbias)
 fit.diss <- refit(out.diss)
+
+plot(out.diss)
+par(mfrow=c(1,2))
+plot(network::network(fit.diss$refit$diss), main='A-AGNES')
+plot(network::network(fit.diss$refit$stars), main='stars')
 

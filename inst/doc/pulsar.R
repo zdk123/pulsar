@@ -32,8 +32,7 @@ lams <- getLamPath(lmax, lmax*.05, len=40)
 hugeargs <- list(lambda=lams, verbose=FALSE)
 time1    <- system.time(
 out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
-                   criterion='stars', seed=10010)
-            )
+                   criterion='stars', seed=10010))
 fit.p    <- refit(out.p)
 
 ## ---- eval=TRUE, message=FALSE-------------------------------------------
@@ -42,9 +41,8 @@ fit.p
 
 ## ---- eval=pulsarchunks--------------------------------------------------
 time2 <- system.time(
-out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, seed=10010)
-               )
+out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
+          criterion='stars', lb.stars=TRUE, ub.stars=TRUE, seed=10010))
 
 ## ---- eval=TRUE----------------------------------------------------------
 time2[[3]] < time1[[3]]
@@ -66,8 +64,9 @@ quicr <- function(data, lambda) {
 ## ---- eval=pulsarchunks--------------------------------------------------
 quicargs <- list(lambda=lams)
 nc    <- if (.Platform$OS.type == 'unix') 2 else 1
-out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100, criterion='stars',
-                lb.stars=TRUE, ub.stars=TRUE, ncores=nc, seed=10010)
+out.q <- pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
+                criterion='stars', lb.stars=TRUE, ub.stars=TRUE,
+                ncores=nc, seed=10010)
 
 ## ---- eval=pulsarchunks--------------------------------------------------
 out.q2 <- update(out.q, criterion=c('stars', 'gcd'))
@@ -93,17 +92,13 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 
 ## ---- eval=getconfig-----------------------------------------------------
-url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
-url <- paste(url, "BatchJobsSerialTest.R", sep="/") # Serial mode
-download.file(url, destfile=".BatchJobs.R")
+conffile <- pulsar::findConfFile()
 
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
-## uncomment below if BatchJobs is not already installed
-# install.packages('BatchJobs')
-library(BatchJobs)
+## uncomment below if batchtools is not already installed
+# install.packages('batchtools')
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
-                          criterion='stars', seed=10010
-                          #, cleanup=TRUE
+                          criterion='stars', seed=10010 #, cleanup=TRUE
                          )
 
 ## ---- eval=TRUE, message=FALSE-------------------------------------------

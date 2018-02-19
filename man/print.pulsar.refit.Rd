@@ -14,4 +14,3 @@
 \description{
 Print information about the model, path length, graph dimension, criterion and optimal indices and graph sparsity.
 }
-

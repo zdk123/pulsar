@@ -91,4 +91,3 @@ Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Pa
 \seealso{
 \code{\link{batch.pulsar}}
 }
-

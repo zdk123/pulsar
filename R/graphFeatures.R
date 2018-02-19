@@ -1,6 +1,6 @@
-### Supporting functions to compute features of a graph ## 
+### Supporting functions to compute features of a graph ##
 ##   represented as an adjacency matrix (can be sparse) ##
-## 
+##
 
 
 #' Graph dissimilarity
@@ -38,12 +38,12 @@ GraphDiss2 <- function(G) {
 #' Natural Connectivity
 #'
 #' Compute the natural connectivity of a graph
-#' 
+#'
 #' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph. Ignored if \code{eig} is given
 #' @param eig precomputed list of eigen vals/vectors (output from \code{eigen}). If NULL, compute for \code{G}.
 #' @param norm should the natural connectivity score be normalized
 #'
-#' @details The natural connectivity of a graph is a useful robustness measure of complex networks, corresponding to the average eigenvalue of the adjacency matrix. 
+#' @details The natural connectivity of a graph is a useful robustness measure of complex networks, corresponding to the average eigenvalue of the adjacency matrix.
 #' @return numeric natural connectivity score
 #' @references Jun, W., Barahona, M., Yue-Jin, T., & Hong-Zhong, D. (2010). Natural Connectivity of Complex Networks. Chinese Physics Letters, 27(7), 78902. doi:10.1088/0256-307X/27/7/078902
 #' @export
@@ -79,7 +79,7 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 #  ## assume G1, G2 are sparse Matrix objects
 #  Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
 ##  n <- length(orbind)
-#  if (ncol(Elist) < 1 || nrow(Elist < 1)) 
+#  if (ncol(Elist) < 1 || nrow(Elist < 1))
 #    return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
 #  gcount <- orca::ecount4(Elist)
 #  if (norm) {
@@ -124,7 +124,7 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 #  return(gcount)
 #  ## expand to all possible edges
 ###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-###  gcor[upper.tri(gcor)] 
+###  gcor[upper.tri(gcor)]
 #}
 
 #' @keywords internal
@@ -141,7 +141,7 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 #' Graphlet correlation vector
 #'
 #' Compute graphlet correlations over the desired orbits (default is 11 non-redundant orbits of graphlets of size <=4) for a single graph \code{G}
-#' 
+#'
 #' @param G a \eqn{p*p} adjacency matrix (dense or sparse) of a graph.
 #' @param orbind index vector for which orbits to use for computing pairwise graphlet correlations. Default is from Yaveroğlu et al, 2014 (see References), but 1 offset needed for R-style indexing.
 #'
@@ -179,7 +179,7 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 ## also return odd/even contributions and the first eigen vector
   if (rmdiag) diag(Graph) <- 0
 # Calculate the subgraph centrality
-#  if (inherits(Graph, 'Matrix')) 
+#  if (inherits(Graph, 'Matrix'))
 #    eigs <- eigs_sym(Graph, ncol(Graph)-1)
 #  else
   if (is.null(eigs))

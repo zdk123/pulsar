@@ -1,16 +1,23 @@
+context("setup")
+
+suppressPackageStartupMessages(library(batchtools))
+options(batchtools.verbose=FALSE)
+options(batchtools.progress=FALSE)
 source('pulsarfuns.R')
 
-rseed <-  10010 #sample.int(1000, 1) #
-p <- 10
+rseed <- 10010
+p     <- 20
 ## generate synthetic data
 set.seed(rseed)
-dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.1, u=.4)
+dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.2, u=.3)
+set.seed(rseed)
+dat$data <- MASS::mvrnorm(p*100, mu=rep(0,p), Sigma=dat$sigma, empirical=TRUE)
 
-library(BatchJobs)
-options(BatchJobs.verbose=FALSE)
-suppressPackageStartupMessages(library(BatchJobs))
-conffile <- file.path(system.file(package="pulsar"), "extdata", "BatchJobsSerialTest.R")
-unlink(getTempDir(), recursive=TRUE)
+fp    <- batchtools:::fp
+npath <- function(x) normalizePath(x, mustWork=FALSE, winslash="/")
+homedir <- npath(fp("~"))
+
+conffile <- ""
 
 ######################################################
 context("pulsar: huge, serial mode")
@@ -22,13 +29,15 @@ quic.serial <- runtests(pulsar, "pulsar", dat, fun=quicr, fargs=list(), seed=rse
 
 ######################################################
 context("pulsar: huge, batch mode")
-huge.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge, fargs=list(verbose=FALSE, scr=TRUE),
-                       conffile=conffile, progressbars=FALSE, cleanup=TRUE, seed=rseed)
+huge.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge,
+                fargs=list(verbose=FALSE, scr=TRUE), conffile=conffile,
+                cleanup=TRUE, seed=rseed, wkdir=homedir)
 
-######################################################
+# ######################################################
 context("pulsar: quic, batch mode")
-quic.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr, fargs=list(),
-                conffile=conffile, progressbars=FALSE, cleanup=TRUE, seed=rseed)
+quic.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr,
+                    fargs=list(), conffile=conffile, cleanup=TRUE,
+                    seed=rseed, wkdir=homedir)
 
 ######################################################
 context("pulsar: serial vs batch")

@@ -25,4 +25,3 @@ The natural connectivity of a graph is a useful robustness measure of complex ne
 \references{
 Jun, W., Barahona, M., Yue-Jin, T., & Hong-Zhong, D. (2010). Natural Connectivity of Complex Networks. Chinese Physics Letters, 27(7), 78902. doi:10.1088/0256-307X/27/7/078902
 }
-
