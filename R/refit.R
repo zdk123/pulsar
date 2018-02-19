@@ -28,6 +28,7 @@
 #'
 #' fit  <- refit(out.p)
 #' }
+#' @seealso \code{\link{pulsar}} \code{\link{batch.pulsar}}
 #' @export
 refit <- function(obj, criterion) {
     UseMethod("refit")

@@ -177,12 +177,13 @@ conffile <- pulsar::findConfFile()
 ```
 
 Since batchtools is not imported by `pulsar`, it needs to be loaded.
-Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
-multiple times).
+Verbosity and progressbar options for batchtools is set by global options.
+Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme multiple times).
 
 ```{r, eval=pulsarchunks, message=FALSE}
 ## uncomment below if batchtools is not already installed
 # install.packages('batchtools')
+options(batchtools.progress=TRUE, batchtools.verbose=FALSE)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010 #, cleanup=TRUE
                          )

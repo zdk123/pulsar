@@ -1,4 +1,4 @@
-^.*\.BatchJobs.*\.R$
+^.*batchtools.*\.R$
 ^README\.Rmd$
 ^README\.log$
 ^figure$
