@@ -9,9 +9,6 @@ o: README.md
 
 
 
-```
-## Error in eval(expr, envir, enclos): object 'opts_knit' not found
-```
 # pulsar: Parallelized Utilities for Lambda Selection Along a Regularization path
 [![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
@@ -174,7 +171,7 @@ Compare model error by relative Hamming distances between refit adjacency matric
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-13](inst/figure/unnamed-chunk-13-1.png)
+![plot of chunk unnamed-chunk-13](https://i.imgur.com/94vzbuJ.png)
 
 
 ```r
@@ -194,7 +191,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 ```
 
-![plot of chunk unnamed-chunk-14](inst/figure/unnamed-chunk-14-1.png)
+![plot of chunk unnamed-chunk-14](https://i.imgur.com/VsDjdNB.png)
 
 ## Batch Mode
 
@@ -267,7 +264,7 @@ opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
 
 * In real applications, on an hpc, it is important to specify the `res.list` argument, which is a
 __named__ list of PBS resources that matches the template file. For example if using the
-simpletorque.tml file provided [here](https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata/simpletorque.tml)
+simpletorque.tml file provided [here](https://raw.githubusercontent.com/zdk123/pulsar/master/inst/templates/simpletorque.tmpl)
 one would provide `res.list=list(walltime="4:00:00", nodes="1", memory="1gb")` to give the PBS
 script 4 hours and 1GB of memory and 1 node to the resource list for `qsub`.
 
