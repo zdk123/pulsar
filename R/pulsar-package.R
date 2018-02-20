@@ -11,7 +11,7 @@
 #'
 #' We also implement additional subsampling-based graph summary criteria which can be used for more informed model selection. For example, we have shown that induced subgraph (graphlet) stability (G-StARS) improves empirical performance over StARS but other criteria are also offered.
 #'
-#' Subsampling amounts to running the specified core model for \eqn{N} independent computations. Using the \pkg{BatchJobs} framework, we provide a simple wrapper, \code{batch.pulsar}, for running \code{\link{pulsar}} in embarrassingly parallel mode in an hpc environment. Summary criteria are computed using a Map/Reduce strategy, which lowers memory footprint for large models.
+#' Subsampling amounts to running the specified core model for \eqn{N} independent computations. Using the \pkg{batchtools} framework, we provide a simple wrapper, \code{batch.pulsar}, for running \code{\link{pulsar}} in embarrassingly parallel mode in an hpc environment. Summary criteria are computed using a Map/Reduce strategy, which lowers memory footprint for large models.
 #' @name pulsar-package
 #' @seealso \code{\link{pulsar-function}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 #' @docType package
@@ -30,12 +30,12 @@ NULL
 #' \tabular{ll}{
 #'   ~function~ \tab ~package~\cr
 #'    huge     \tab   huge   \cr
-#'    sugm     \tab   flare  
+#'    sugm     \tab   flare
 #' }
 #'
 #'
 #' Inputs:
-#' 
+#'
 #' The function may take arbitrary, named arguments but the first argument must be the data \eqn{n*p} data matrix with the \eqn{n} samples in rows and \eqn{p} features in the columns.
 #' At least one argument must be named "lambda", which is expected to be a decreasing numeric vector of penalties. The non-data arguments should be passed into \code{\link{pulsar}} or \code{\link{batch.pulsar}} as a named list (the names must match function arguments exactly) to the \code{fargs} argument.
 #'
@@ -55,7 +55,7 @@ NULL
 #'     tmp <- abs(S) > lam
 #'     diag(tmp) <- FALSE
 #'     as(tmp, 'lsCMatrix')
-#'   }) 
+#'   })
 #'   list(path=path)
 #' }
 #'
@@ -63,7 +63,7 @@ NULL
 #' lam <- getLamPath(getMaxCov(dat$sigmahat), 1e-4, 10)
 #' out.cor  <- pulsar(dat$data, corrthresh, fargs=list(lambda=lam))
 #' out.cor
-#' 
+#'
 #' \dontrun{
 #' ## Additional examples
 #' ## quic
@@ -99,7 +99,7 @@ NULL
 #'                  })
 #'      list(path=path)
 #' }
-#' 
+#'
 #' ## Penalized linear model, only
 #' library(glmnet)
 #' lasso <- function(data, lambda, respind=1, family="gaussian", ...) {
@@ -120,4 +120,3 @@ NULL
 #' @seealso \code{\link{pulsar}}, \code{\link{batch.pulsar}}, \pkg{huge}, \pkg{Matrix}
 #' @references Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv: http://arxiv.org/abs/1605.07072.
 NULL
-
