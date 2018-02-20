@@ -97,6 +97,7 @@ conffile <- pulsar::findConfFile()
 ## ---- eval=pulsarchunks, message=FALSE-----------------------------------
 ## uncomment below if batchtools is not already installed
 # install.packages('batchtools')
+options(batchtools.progress=TRUE, batchtools.verbose=FALSE)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010 #, cleanup=TRUE
                          )

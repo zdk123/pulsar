@@ -9,6 +9,9 @@ o: README.md
 
 
 
+```
+## Error in eval(expr, envir, enclos): object 'opts_knit' not found
+```
 # pulsar: Parallelized Utilities for Lambda Selection Along a Regularization path
 [![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
@@ -88,15 +91,15 @@ Inspect the output:
 ```r
 out.p
 # Mode: serial
-# Path length: 40
-# Subsamples:  20
-# Graph dim:   40
+# Path length: 40 
+# Subsamples:  20 
+# Graph dim:   40 
 # Criterion:
 #   stars... opt: index 11, lambda 0.106
 fit.p
-# Pulsar-selected refit of huge
-# Path length: 40
-# Graph dim:   40
+# Pulsar-selected refit of huge 
+# Path length: 40 
+# Graph dim:   40 
 # Criterion:
 #   stars... sparsity 0.0262
 ```
@@ -171,7 +174,7 @@ Compare model error by relative Hamming distances between refit adjacency matric
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-13](https://i.imgur.com/jKYlHWC.png)
+![plot of chunk unnamed-chunk-13](inst/figure/unnamed-chunk-13-1.png)
 
 
 ```r
@@ -191,13 +194,13 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 ```
 
-![plot of chunk unnamed-chunk-14](https://i.imgur.com/wX34SaT.png)
+![plot of chunk unnamed-chunk-14](inst/figure/unnamed-chunk-14-1.png)
 
 ## Batch Mode
 
 For large graphs, we could reduce `pulsar` run time by running each subsampled dataset in parallel (i.e., each run as an independent job). This is a natural choice since we want to infer an independent graphical model for each subsampled dataset.
 
-Enter (batchtools)[https://mllg.github.io/batchtools/articles/batchtools.html]. This package lets us invoke the queuing system in a high performance computing (hpc) environment so that we don't have to worry about any of the job-handling procedures in R.
+Enter [batchtools](https://mllg.github.io/batchtools/articles/batchtools.html). This package lets us invoke the queuing system in a high performance computing (hpc) environment so that we don't have to worry about any of the job-handling procedures in R.
 
 `pulsar` has only been tested for Torque so far, but should work without too much effort for LSF, SLURM, SGE, ...
 
@@ -216,13 +219,14 @@ conffile <- pulsar::findConfFile()
 ```
 
 Since batchtools is not imported by `pulsar`, it needs to be loaded.
-Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme
-multiple times).
+Verbosity and progressbar options for batchtools is set by global options.
+Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme multiple times).
 
 
 ```r
 ## uncomment below if batchtools is not already installed
 # install.packages('batchtools')
+options(batchtools.progress=TRUE, batchtools.verbose=FALSE)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010 #, cleanup=TRUE
                          )
