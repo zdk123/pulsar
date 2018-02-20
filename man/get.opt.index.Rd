@@ -31,4 +31,3 @@ Criterion:
 \seealso{
 \code{\link{opt.index}}
 }
-

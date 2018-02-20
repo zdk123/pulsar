@@ -22,4 +22,3 @@ Dissimilarity matrix of a graph is here defined as the number of neighbors share
 \references{
 Bochkina, N. (2015). Selection of the Regularization Parameter in Graphical Models using a Priori Knowledge of Network Structure, arXiv: 1509.05326.
 }
-

@@ -14,16 +14,16 @@ bibliography: ../inst/gstars.bib
 library(pulsar)
 ```
 
-In addition to StARS' edge stability and G-StARS' induced subgraph stability, `pulsar` can 
-be used to compute other model selection criteria. By defining a few auxiliary functions, 
-`pulsar` can conveniently recapitulate a number of recently proposed selection criteria, e.g., 
-@Tandon2014's sufficiency measure for hub discovery or @Caballe:2015's augmented AGNES scheme. 
+In addition to StARS' edge stability and G-StARS' induced subgraph stability, `pulsar` can
+be used to compute other model selection criteria. By defining a few auxiliary functions,
+`pulsar` can conveniently recapitulate a number of recently proposed selection criteria, e.g.,
+@Tandon2014's sufficiency measure for hub discovery or @Caballe:2015's augmented AGNES scheme.
 
 ## Learning Graphs with a few hubs
 
 The sufficiency criterion defined by @Tandon2014
 uses edge stability to identify hub and non-hub nodes. Graphs are learned from the neighborhoods
-of non-hub nodes only, but, since hub nodes neighbor non-hubs, an entire graph can be learned more accurately 
+of non-hub nodes only, but, since hub nodes neighbor non-hubs, an entire graph can be learned more accurately
 with fewer samples. The paper includes sample complexity bounds for Ising graphical models. In this
 example, we generate correlated binary data for cheap (compared to Gibbs sampling) with Normal
 copula functions.
@@ -88,15 +88,12 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
 
 ## Augmented AGNES
 
-To replicate the augmented AGNES (A-AGNES) method of @Caballe:2015,
-use the node-wise dissimilarity metric (diss) and the AGNES algorithm as implemented in the 
-`cluster` package. A-AGNES selects the lambda that minimizes the variance of the estimated diss +
-the [squared] bias of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that
-has the maximum agglomerative coefficient over the path.
+To replicate the augmented AGNES (A-AGNES) method of @Caballe:2015, use the node-wise dissimilarity metric (diss) and the AGNES algorithm as implemented in the `cluster` package. A-AGNES selects the lambda that minimizes the variance of the estimated diss + the [squared] bias of the expected estimated dissimilarities w.r.t. the AGNES-selected graph - that has the maximum agglomerative coefficient over the path.
 
-```{r, eval=TRUE, warning=FALSE, message=FALSE}
+```{r, eval=TRUE, warning=FALSE, message=FALSE, fig.width=7, fig.height=5}
+dat <- huge.generator(n, p, 'hub', verbose=FALSE, v=.1, u=.4)
 out.diss  <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
-                    rep.num=20, criterion='diss')
+                    rep.num=20, criterion=c('diss', 'stars'))
 fit <- refit(out.diss)
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
@@ -113,7 +110,13 @@ varbias  <- out.diss$diss$summary + dissbias
 ## Select the index and refit
 opt.index(out.diss, 'diss') <- which.min(varbias)
 fit.diss <- refit(out.diss)
+
+plot(out.diss)
+par(mfrow=c(1,2))
+plot(network::network(fit.diss$refit$diss), main='A-AGNES')
+plot(network::network(fit.diss$refit$stars), main='stars')
 ```
-Feel free to request your favorite selection criterion to include with this package.
+
+Please contact the package authors to request your favorite selection criterion to include with this package.
 
 ## References

@@ -89,6 +89,5 @@ Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularizatio
 Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
 }
 \seealso{
-\code{\link{batch.pulsar}}
+\code{\link{batch.pulsar}} \code{\link{refit}}
 }
-

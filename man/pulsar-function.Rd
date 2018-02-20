@@ -106,4 +106,3 @@ Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016). Generalized Stability App
 \seealso{
 \code{\link{pulsar}}, \code{\link{batch.pulsar}}, \pkg{huge}, \pkg{Matrix}
 }
-

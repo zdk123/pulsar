@@ -1,0 +1,13 @@
+pulsar 0.3.0 (02-2018 Release)
+==============
+
+Changes:
+
+* Migrate to the new and improved batchtools for batch.pulsar & related functions. BatchJobs is deprecated.
+** Updated how default config files and templates are sourced
+** Removed the getTempDir function
+** Updated documentation
+** Deprecated batch.pulsar progressbar arguments, now controlled by batchtools options.
+
+* Fixed some failing tests. Small data tests were too sensitive to parameter choices, substituted larger p datasets.
+* Similar fix for problem vignettes.

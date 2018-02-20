@@ -7,9 +7,8 @@
 batch.pulsar(data, fun = huge::huge, fargs = list(),
   criterion = c("stars"), thresh = 0.1, subsample.ratio = NULL,
   lb.stars = FALSE, ub.stars = FALSE, rep.num = 20, seed = NULL,
-  regdir = getTempDir(), regid = basename(regdir), init = "subtwo",
-  conffile = ".BatchJobs.R", job.res = list(), progressbars = TRUE,
-  cleanup = FALSE)
+  wkdir = getwd(), regdir = NA, init = "init", conffile = "",
+  job.res = list(), cleanup = FALSE)
 }
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
@@ -32,17 +31,15 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{seed}{A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.}
 
-\item{regdir}{directory to store intermediate batch job files}
+\item{wkdir}{set the working directory if different than \code{\link{getwd}}}
 
-\item{regid}{text string representing a unique registry ID for your project}
+\item{regdir}{directory to store intermediate batch job files. Default will be a tempory directory}
 
-\item{init}{text string appended to basename of regdir to store the batch jobs for the initial StARS variability estimate}
+\item{init}{text string appended to basename of the regdir path to store the batch jobs for the initial StARS variability estimate (ignored if `regdir` is NA)}
 
-\item{conffile}{path to BatchJobs configuration file}
+\item{conffile}{path or string to \code{\link[batchtools]{batchtools}} identify configuration file. See details for an explanation.}
 
-\item{job.res}{named list of resources needed for each job (e.g. for intermediate PBS script). The format and members depends on configuation and template. See examples section for a Torque example}
-
-\item{progressbars}{Flag to show various BatchJobs progress bars. Set FALSE for less output.}
+\item{job.res}{named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuation and template. See examples section for a Torque example}
 
 \item{cleanup}{Flag for removing BatchJob registry files. Recommended FALSE unless you're sure indetermediate data shouldn't be saved.}
 }
@@ -60,9 +57,9 @@ If \code{stars} is included as a criterion then additional arguments include
    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 }
 
-reg: Registry object. See \code{BatchJobs::makeRegistry}
+reg: Registry object. See \code{batchtools::makeRegistry}
 
-id: Identifier for mapping graph estimation function. See \code{BatchJobs::batchMap}
+id: Identifier for mapping graph estimation function. See \code{batchtools::batchMap}
 
 call: the original function call
 }
@@ -77,30 +74,43 @@ The options for \code{criterion} statistics are:
    \item estrada (estrada class) see \code{\link{estrada.class}}
    \item sufficiency (Tandon & Ravikumar's sufficiency statistic)
 }
+
+If \code{conffile} is not given as a path to a file, we implement an extension of the \code{conf.file} option in \code{batchtools::makeRegistry}.
+A file lookup is executed in the following order, and the first file found will be used
+\itemize{\item File "batchtools.conf.R" in the path specified by the environment variable "R_BATCHTOOLS_SEARCH_PATH".
+        \item File "batchtools.conf.R" in the current working directory.
+        \item File "config.R" in the OS dependent user configuration directory as reported by via `rappdirs::user_config_dir("batchtools", expand = FALSE)` (e.g., on linux this usually resolves to "~/.config/batchtools/config.R").
+        \item ".batchtools.conf.R" in the home directory ("~").
+        \item The default file .batchtools.conf.R, located in the pulsar package directory and under the config subdirectory. This will execute pulsar in interactive/serial mode.
+        If \code{conffile} is a string, get the default file batchtools.conf.{conffile}.R under pulsar's config subdirectory. Valid values are ['parallel', 'snow', 'torque'].
+   }
+For distributed computing environments with a queueing system, a simple default template for submitting the job (i.e. PBS script) is provided under the templates subdirectory. It is strongly recommended that a custom configfile and template be constructed to suit your cluster.
 }
 \examples{
 \dontrun{
 ## Generate the data with huge:
 library(huge)
 set.seed(10010)
-p <- 40 ; n <- 1200
+p <- 400 ; n <- 1200
 dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 lams  <- getLamPath(.2, .01, len=40)
+hugeargs  <- list(lambda=lams, verbose=FALSE)
 
+## Run batch.pulsar using snow on 5 cores, and show progress.
+options(mc.cores=5)
+options(batchtools.progress=TRUE, batchtools.verbose=FALSE)
+out <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
+                 rep.num=20, criterion='stars', conffile='snow')
 ## Run batch.pulsar on a Torque cluster
-
-## Get example template and config files
-url <- "https://raw.githubusercontent.com/zdk123/pulsar/master/inst/extdata"
-download.file(paste(url, "BatchJobsTorque.R", sep="/"), destfile=".BatchJobs.R")
-download.file(paste(url, "simpletorque.tml", sep="/"),  destfile="simpletorque.tml")
-
 ## Give each job 1gb of memory and a limit of 30 minutes
 resources <- list(memory="1GB", nodes="1", walltime="00:30:00")
-hugeargs  <- list(lambda=lams, verbose=FALSE)
 out.p <- batch.pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
-                      rep.num=100, criterion=c('stars', 'gcd'),
-                      job.res=resources, regdir=file.path(getwd(), "testtorq"))
+                 rep.num=100, criterion=c('stars', 'gcd'), conffile='torque'
+                 job.res=resources, regdir=file.path(getwd(), "testtorq"))
 plot(out.p)
+## check out the default torque conffile and template
+pulsar::findConfFile('torque')
+pulsar::findTemplateFile('simpletorque')
 }
 }
 \references{
@@ -115,4 +125,3 @@ Bischl, B., Lang, M., Mersmann, O., Rahnenführer, J., & Weihs, C. (2015). Batch
 \seealso{
 \code{\link{pulsar}}
 }
-

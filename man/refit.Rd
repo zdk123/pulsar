@@ -43,4 +43,6 @@ out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
 fit  <- refit(out.p)
 }
 }
-
+\seealso{
+\code{\link{pulsar}} \code{\link{batch.pulsar}}
+}

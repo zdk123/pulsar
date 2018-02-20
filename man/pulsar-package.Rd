@@ -24,4 +24,3 @@ Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).Generalized Stability Appr
 \seealso{
 \code{\link{pulsar-function}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 }
-

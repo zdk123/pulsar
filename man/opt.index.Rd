@@ -22,4 +22,3 @@ Get or set the optimal index of the lambda path, as determined by a given criter
 \seealso{
 \code{\link{get.opt.index}}
 }
-

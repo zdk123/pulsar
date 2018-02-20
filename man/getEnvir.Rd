@@ -18,4 +18,3 @@ Generic S3 method for extracting an environment from an S3 object. A getter for 
 \seealso{
 \code{getCall}, \code{environment}, \code{parent.env}, \code{eval}
 }
-

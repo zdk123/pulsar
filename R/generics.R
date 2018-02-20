@@ -73,7 +73,7 @@ print.batch.pulsar <- function(x, ...) {
 #' @param loglam Flag to plot log[lambda]
 #' @param legends Flag to plot legends
 #' @param ... ignored
-#' 
+#'
 #' @details If both invlam and loglam are given, log[1/lambda] is plotted
 #' @export
 plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE, ...) {
@@ -103,7 +103,8 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
     }
 
     yrange <- c(0, ymax)
-    plot(lams, seq(yrange[1], yrange[2], length.out=nlam), xlab=xlab, ylab=ylab, type='n')
+    plot(lams, seq(yrange[1], yrange[2], length.out=nlam),
+         xlab=xlab, ylab=ylab, type='n')
     if (!is.null(x$stars$lb.index)) {
         ilams <- 1:length(lams)
         range1 <- ilams < x$stars$ub.index
@@ -178,7 +179,7 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
 #' \dontrun{p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 #' lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
-#' 
+#'
 #' ## Run pulsar with huge
 #' hugeargs <- list(lambda=lams, verbose=FALSE)
 #' out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,

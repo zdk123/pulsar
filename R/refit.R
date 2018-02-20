@@ -1,5 +1,5 @@
 #' Refit pulsar model
-#' 
+#'
 #' Run the supplied graphical model function on the whole dataset and refit with the selected lambda(s)
 #'
 #' @param obj a fitted \code{pulsar} or \code{batch.pulsar} object
@@ -20,7 +20,7 @@
 #' p <- 40 ; n <- 1200
 #' dat   <- huge.generator(n, p, "hub", verbose=FALSE, v=.1, u=.3)
 #' lams  <- getLamPath(getMaxCov(dat$data), .01, len=20)
-#' 
+#'
 #' ## Run pulsar with huge
 #' hugeargs <- list(lambda=lams, verbose=FALSE)
 #' out.p <- pulsar(dat$data, fun=huge::huge, fargs=hugeargs,
@@ -28,6 +28,7 @@
 #'
 #' fit  <- refit(out.p)
 #' }
+#' @seealso \code{\link{pulsar}} \code{\link{batch.pulsar}}
 #' @export
 refit <- function(obj, criterion) {
     UseMethod("refit")
@@ -49,16 +50,16 @@ refit.pulsar <- function(obj, criterion) {
     est$refit <- vector('list', length(criterion))
     names(est$refit) <- criterion
     for (crit in criterion) {
-        optind <- obj[[crit]]$opt.index
-        if (!is.null(optind)) {
-            est$refit[[crit]] <- est$est$path[[optind]]
-        } else {
-            est$refit[[crit]] <- NULL
-            if (crit %in% names(obj)) {
-                message(paste('No optimal index selected for', crit, 'criterion', sep=" "))
-            } else
-                warning(paste('Unknown criterion', crit, sep=" "), call.=FALSE)
-        }
+      optind <- obj[[crit]]$opt.index
+      if (!is.null(optind)) {
+        est$refit[[crit]] <- est$est$path[[optind]]
+      } else {
+        est$refit[[crit]] <- NULL
+        if (crit %in% names(obj)) {
+          message(paste('No optimal index selected for', crit, 'criterion', sep=" "))
+        } else
+          warning(paste('Unknown criterion', crit, sep=" "), call.=FALSE)
+      }
     }
     est$fun <- obj$call$fun
     structure(est, class='pulsar.refit')

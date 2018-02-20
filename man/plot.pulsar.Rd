@@ -26,4 +26,3 @@ Plot a \code{pulsar} S3 object
 \details{
 If both invlam and loglam are given, log[1/lambda] is plotted
 }
-
