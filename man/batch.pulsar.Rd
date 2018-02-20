@@ -41,7 +41,7 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{job.res}{named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example}
 
-\item{cleanup}{Flag for removing BatchJob registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.}
+\item{cleanup}{Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

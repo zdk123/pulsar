@@ -80,7 +80,7 @@ findTemplateFile <- function(name) {
 #' @param init text string appended to basename of the regdir path to store the batch jobs for the initial StARS variability estimate (ignored if `regdir` is NA)
 #' @param conffile path or string to \code{\link[batchtools]{batchtools}} identify configuration file. See details for an explanation.
 #' @param job.res named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example
-#' @param cleanup Flag for removing BatchJob registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.
+#' @param cleanup Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
 #' \itemize{
 #'    \item summary: the summary statistic over \code{rep.num} graphs at each value of lambda
