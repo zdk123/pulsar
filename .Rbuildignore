@@ -3,3 +3,5 @@
 ^README\.log$
 ^figure$
 ^\.travis\.yml$
+^.*cran-comments.md$
+^.*revdep.*
