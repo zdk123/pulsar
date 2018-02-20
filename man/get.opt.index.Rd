@@ -17,7 +17,7 @@ get.opt.index(obj, criterion = "gcd", ...)
 index of the lambda path
 }
 \description{
-If the optimal index for the lambda path is not already assigned, then use a validated method to 
+If the optimal index for the lambda path is not already assigned, then use a validated method to
 select the optimal index of the lambda path for alternate criteria  (i.e. other than StARS).
 }
 \details{
@@ -25,7 +25,7 @@ Automated optimal index selection is [currently] only implemented for \code{gcd}
 
 Criterion:
 \itemize{
- \item gcd: Select the mimimum gcd summary score within the lower and upper StARS bounds.
+ \item gcd: Select the minimum gcd summary score within the lower and upper StARS bounds.
 }
 }
 \seealso{

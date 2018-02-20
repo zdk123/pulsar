@@ -14,7 +14,7 @@ These packages on CRAN have functions that work out of the box, so you won't nee
 \tabular{ll}{
   ~function~ \tab ~package~\cr
    huge     \tab   huge   \cr
-   sugm     \tab   flare  
+   sugm     \tab   flare
 }
 
 
@@ -39,7 +39,7 @@ corrthresh <- function(data, lambda) {
     tmp <- abs(S) > lam
     diag(tmp) <- FALSE
     as(tmp, 'lsCMatrix')
-  }) 
+  })
   list(path=path)
 }
 

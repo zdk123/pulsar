@@ -7,7 +7,7 @@
 findConfFile(name = "")
 }
 \arguments{
-\item{name}{name of default config or path to config file. Empty string to use batchtool to search in the file system.}
+\item{name}{name of default config or path to config file. Empty string to use batchtools to search in the file system.}
 }
 \description{
 Find a config file from batchtools or default file from pulsar

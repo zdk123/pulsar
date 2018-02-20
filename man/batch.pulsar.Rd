@@ -15,7 +15,7 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{fun}{pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.}
 
-\item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.}
+\item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penalty parameter.}
 
 \item{criterion}{A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.}
 
@@ -39,9 +39,9 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{conffile}{path or string to \code{\link[batchtools]{batchtools}} identify configuration file. See details for an explanation.}
 
-\item{job.res}{named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuation and template. See examples section for a Torque example}
+\item{job.res}{named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example}
 
-\item{cleanup}{Flag for removing BatchJob registry files. Recommended FALSE unless you're sure indetermediate data shouldn't be saved.}
+\item{cleanup}{Flag for removing BatchJob registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -70,7 +70,7 @@ Run pulsar using stability selection, or another criteria, to select an undirect
 The options for \code{criterion} statistics are:
 \itemize{
    \item stars (Stability approach to regularization selection)
-   \item gcd   (Graphet correlation distance, requires the \pkg{orca} package)
+   \item gcd   (Graphlet correlation distance, requires the \pkg{orca} package)
    \item estrada (estrada class) see \code{\link{estrada.class}}
    \item sufficiency (Tandon & Ravikumar's sufficiency statistic)
 }
@@ -114,14 +114,14 @@ pulsar::findTemplateFile('simpletorque')
 }
 }
 \references{
-Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv http://arxiv.org/abs/1605.07072
+Müller, C. L., Bonneau, R., & Kurtz, Z. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv https://arxiv.org/abs/1605.07072
 
 Liu, H., Roeder, K., & Wasserman, L. (2010). Stability approach to regularization selection (stars) for high dimensional graphical models. Proceedings of the Twenty-Third Annual Conference on Neural Information Processing Systems (NIPS).
 
 Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
 
-Bischl, B., Lang, M., Mersmann, O., Rahnenführer, J., & Weihs, C. (2015). BatchJobs and BatchExperiments : Abstraction Mechanisms for Using R in Batch Environments. Journal of Statistical Software, 64(11), 1–25. doi:10.18637/jss.v064.i11
+Michel Lang, Bernd Bischl, Dirk Surmann (2017). batchtools: Tools for R to work on batch systems. The Journal of Open Source Software, 2(10). URL https://doi.org/10.21105/joss.00135.
 }
 \seealso{
-\code{\link{pulsar}}
+\code{\link{pulsar}} \code{\link{refit}}
 }

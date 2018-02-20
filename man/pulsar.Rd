@@ -13,7 +13,7 @@ pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
 
 \item{fun}{pass in a function that returns a list representing \eqn{p*p} sparse, undirected graphical models along the desired regularization path. The expected inputs to this function are: a data matrix input and a sequence of decreasing lambdas and must return a list or S3 object with a member \emph{named} \code{path}. This should be a list of adjacency matrices for each value of \code{lambda}. See \code{\link{pulsar-function}} for more information.}
 
-\item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penality parameter.}
+\item{fargs}{arguments to argument \code{fun}. Must be a named list and requires at least one member \code{lambda}, a numeric vector with values for the penalty parameter.}
 
 \item{criterion}{A character vector of selection statistics. Multiple criteria can be supplied. Only StARS can be used to automatically select an optimal index for the lambda path. See details for additional statistics.}
 
@@ -29,7 +29,7 @@ pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
 
 \item{ub.stars}{Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
-\item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more paralellization options.}
+\item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

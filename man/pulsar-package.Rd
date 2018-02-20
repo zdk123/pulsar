@@ -16,7 +16,7 @@ Previous StARS implementations can be inefficient for large graphs or when many 
 
 We also implement additional subsampling-based graph summary criteria which can be used for more informed model selection. For example, we have shown that induced subgraph (graphlet) stability (G-StARS) improves empirical performance over StARS but other criteria are also offered.
 
-Subsampling amounts to running the specified core model for \eqn{N} independent computations. Using the \pkg{BatchJobs} framework, we provide a simple wrapper, \code{batch.pulsar}, for running \code{\link{pulsar}} in embarrassingly parallel mode in an hpc environment. Summary criteria are computed using a Map/Reduce strategy, which lowers memory footprint for large models.
+Subsampling amounts to running the specified core model for \eqn{N} independent computations. Using the \pkg{batchtools} framework, we provide a simple wrapper, \code{batch.pulsar}, for running \code{\link{pulsar}} in embarrassingly parallel mode in an hpc environment. Summary criteria are computed using a Map/Reduce strategy, which lowers memory footprint for large models.
 }
 \references{
 Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).Generalized Stability Approach for Regularized Graphical Models.arXiv: http://arxiv.org/abs/1605.07072.
