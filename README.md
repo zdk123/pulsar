@@ -92,13 +92,13 @@ out.p
 # Subsamples:  20 
 # Graph dim:   40 
 # Criterion:
-#   stars... opt: index 11, lambda 0.106
+#   stars... opt: index 12, lambda 0.105
 fit.p
 # Pulsar-selected refit of huge 
 # Path length: 40 
 # Graph dim:   40 
 # Criterion:
-#   stars... sparsity 0.0262
+#   stars... sparsity 0.0213
 ```
 
 Including the lower bound option `lb.stars` and upper bound option `ub.stars` can improve runtime
@@ -171,7 +171,7 @@ Compare model error by relative Hamming distances between refit adjacency matric
 plot(out.q2, scale=TRUE)
 ```
 
-![plot of chunk unnamed-chunk-13](https://i.imgur.com/94vzbuJ.png)
+![plot of chunk unnamed-chunk-13](https://i.imgur.com/sU2yr8a.png)
 
 
 ```r
@@ -191,7 +191,7 @@ plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
 plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 ```
 
-![plot of chunk unnamed-chunk-14](https://i.imgur.com/VsDjdNB.png)
+![plot of chunk unnamed-chunk-14](https://i.imgur.com/hpWIkfb.png)
 
 ## Batch Mode
 

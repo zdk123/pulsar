@@ -1,12 +1,13 @@
+## Job name:
 #PBS -N <%= job.name %>
-## merge standard error and output
+
+## Merge standard error and output:
 #PBS -j oe
-## direct streams to our logfile
-#PBS -o <%= log.file %>
-#PBS -l walltime=<%= resources$walltime %>,nodes=<%= resources$nodes %>,mem=<%= resources$memory %>
-## remove this line if your cluster does not support arrayjobs
-PBS -t 1-<%= arrayjobs %>
-  
+
+## Resource parameters:
+<% for (name in names(resources)) { %>
+#PBS -l <%= name %>=<%= resources[[name]] %>
+<% } %>
+
 ## Run R:
-## we merge R output with stdout from PBS, which gets then logged via -o option
 R CMD BATCH --no-save --no-restore "<%= rscript %>" /dev/stdout

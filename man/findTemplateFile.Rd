@@ -12,6 +12,33 @@ findTemplateFile(name)
 \description{
 Find a config file from batchtools or default file from pulsar
 }
+\details{
+Similar to the recipe used for template lookup in \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc.
+
+Either a path to a ‘brew’ template file (with extension
+         "tmpl"), or a short descriptive name enabling the following
+         heuristic for the file lookup:
+
+   \enumerate{
+     \item "batchtools.[name].tmpl" in the path specified by the
+             environment variable "R_BATCHTOOLS_SEARCH_PATH".
+
+     \item "batchtools.[name].tmpl" in the current working
+             directory.
+
+     \item "[name].tmpl" in the user config directory (see
+             ‘user_config_dir’); on linux this is usually
+             "~/.config/batchtools/[template].tmpl".
+
+      \item ".batchtools.[name].tmpl" in the home directory.
+
+     \item "[name].tmpl" in the batchtools installation directory
+             in the subfolder "templates".
+
+     \item "[name].tmpl" in the pulsar installation directory
+             in the subfolder "templates".
+   }
+}
 \seealso{
 findConfFile
 }

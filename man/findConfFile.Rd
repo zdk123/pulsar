@@ -12,6 +12,35 @@ findConfFile(name = "")
 \description{
 Find a config file from batchtools or default file from pulsar
 }
+\details{
+A file lookup is executed in the following order, and the first file found will be used
+\enumerate{\item File "batchtools.conf.R" in the path specified by the environment variable "R_BATCHTOOLS_SEARCH_PATH".
+        \item File "batchtools.conf.R" in the current working directory.
+        \item File "config.R" in the OS dependent user configuration directory as reported by via `rappdirs::user_config_dir("batchtools", expand = FALSE)` (e.g., on linux this usually resolves to "~/.config/batchtools/config.R").
+        \item ".batchtools.conf.R" in the home directory ("~").
+        \item "[name].tmpl" in the pulsar installation directory
+             in the subfolder "templates".
+   }
+For clusters with a queuing submission system, a template file, for
+defining worker node resources and executing the batch R code, will need to
+be defined somewhere on the system. See \code{\link{findTemplateFile}}.
+}
+\examples{
+## Default config file provided by pulsar runs code in interactive mode
+## This is for testing purposes and executes serially.
+findConfFile()
+## Use the parallel package
+## slower than providing the 'ncores' argument to pulsar function, due to
+## the overhead of creating the batchtools registry.
+findConfFile('parallel')
+
+## Use the snow package to register/execute batch jobs on socket clusters.
+findConfFile('snow')
+## Use a TORQUE / PBS queing system. Requires brew template file.
+findConfFile('torque')
+findTemplateFile('simpletorque')
+
+}
 \seealso{
-findTemplateFile
+\code{\link{findTemplateFile}}
 }

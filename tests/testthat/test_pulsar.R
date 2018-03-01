@@ -6,10 +6,9 @@ options(batchtools.progress=FALSE)
 source('pulsarfuns.R')
 
 rseed <- 10010
-p     <- 20
-## generate synthetic data
+p     <- 28
 set.seed(rseed)
-dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.2, u=.3)
+dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.4, u=.2)
 set.seed(rseed)
 dat$data <- MASS::mvrnorm(p*100, mu=rep(0,p), Sigma=dat$sigma, empirical=TRUE)
 
