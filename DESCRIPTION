@@ -1,6 +1,10 @@
 Package: pulsar
 Title: Parallel Utilities for Lambda Selection along a Regularization Path
+<<<<<<< HEAD
 Version: 0.3.3
+=======
+Version: 0.3.2
+>>>>>>> fixed windows paths
 Encoding: UTF-8
 Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
              person("Christian", "M\u00FCller", role = c("aut", "ctb"), email="cmueller@simonsfoundation.org"))
