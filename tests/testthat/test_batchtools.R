@@ -44,7 +44,7 @@ test_that("default config files are in search path", {
 
   expect_equivalent(length(batchtools:::findConfFile()), 0)
 
-#  conftestbt(conf5)
+  conftestbt(conf5)
   dir6exists <- dir.exists(dir6)
   dir.create(dir6, showWarnings = FALSE, recursive = TRUE)
   conftestbt(conf6)
@@ -82,8 +82,7 @@ test_that("default template files are in the search path", {
   tmpl3 <- npath(fp("~", sprintf(".batchtools.%s.tmpl", base)))
   dir4  <- rappdirs::user_config_dir("batchtools", expand = FALSE)
   tmpl4 <- fp(dir4, paste0(base, ".tmpl"))
-  tmpl5 <- npath(fp(getwd(), sprintf("batchtools.%s.tmpl", base)))
-  tmpl6 <- npath(fp(getwd(), sprintf("batchtools.%s.tmpl", 'simpletorque')))
+  tmpl5 <- fp(npath(getwd()), sprintf("batchtools.%s.tmpl", base))
 
   templtestbt(tmpl2)
   templtestbt(tmpl3)
@@ -94,9 +93,8 @@ test_that("default template files are in the search path", {
   if (!dir4exists)
     unlink(dir4, recursive=TRUE, force=TRUE)
   templtestbt(tmpl5)
-  templtestbt(tmpl6)
   ## cleanup
-  suppressWarnings(file.remove(tmpl2, tmpl3, tmpl4, tmpl5, tmpl6))
+  suppressWarnings(file.remove(tmpl2, tmpl3, tmpl4, tmpl5))
 })
 
 

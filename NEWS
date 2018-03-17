@@ -1,3 +1,12 @@
+pulsar 0.3.2 (03-2018 Release)
+==============
+
+Changes:
+
+* Fixed tests that were failing on Windows.
+* Fixed a few typos in the docs.
+
+
 pulsar 0.3.0 (02-2018 Release)
 ==============
 
