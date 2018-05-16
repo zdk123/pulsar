@@ -1,6 +1,6 @@
 Package: pulsar
 Title: Parallel Utilities for Lambda Selection along a Regularization Path
-Version: 0.3.2
+Version: 0.3.3
 Encoding: UTF-8
 Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
              person("Christian", "M\u00FCller", role = c("aut", "ctb"), email="cmueller@simonsfoundation.org"))
@@ -11,8 +11,9 @@ Depends:
     R (>= 3.2.0)
 License: GPL (>= 2)
 Suggests:
-    batchtools,
-    rappdirs,
+    batchtools (>= 0.9.9),
+    fs (>= 1.2.2),
+    checkmate (>= 1.8.5),
     orca,
     huge,
     MASS,
@@ -29,6 +30,7 @@ Imports:
     graphics,
     stats,
     utils,
+    tools,
     Matrix
 RoxygenNote: 6.0.1
 VignetteBuilder: knitr
