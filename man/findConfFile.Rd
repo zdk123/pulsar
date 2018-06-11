@@ -10,14 +10,14 @@ findConfFile(name = "")
 \item{name}{name of default config or path to config file.}
 }
 \description{
-Find a default config file from pulsar
+Find a default config file. First calls \code{batchtools::findConfFile} and then find a pulsar default.
 }
 \details{
+See the batchtools functions \code{batchtools::findConfFile} and \code{batchtools::makeRegistry}. When calling \code{batch.pulsar}, we attempt to use batchtool's default lookup for a config file before calling \code{pulsar::findConfFile}.
+
 For clusters with a queuing submission system, a template file, for
 defining worker node resources and executing the batch R code, will need to
 be defined somewhere on the system. See \code{\link{findTemplateFile}}.
-
-See the batchtools functions \code{batchtools::makeRegistry}. When calling \code{batch.pulsar}, we attempt to use batchtool's default lookup for a config file before calling \code{pulsar::findConfFile}.
 }
 \examples{
 ## Default config file provided by pulsar runs code in interactive mode

@@ -69,9 +69,10 @@ varbias  <- out.diss$diss$summary + dissbias
 
 ## Select the index and refit
 opt.index(out.diss, 'diss') <- which.min(varbias)
-fit.diss <- refit(out.diss, 'diss')
+fit.diss <- refit(out.diss)
 
 plot(out.diss)
 par(mfrow=c(1,2))
-plot(network::network(fit.diss$refit$diss), main='A-AGNES')
-plot(network::network(fit.diss$refit$stars), main='stars')
+plot(network::network(as.matrix(fit.diss$refit$diss)), main='A-AGNES')
+plot(network::network(as.matrix(fit.diss$refit$stars)), main='stars')
+

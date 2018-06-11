@@ -1,6 +1,6 @@
 #' find config file
 #'
-#' Find a default config file from pulsar
+#' Find a default config file. First calls \code{batchtools::findConfFile} and then find a pulsar default.
 #'
 #' @param name name of default config or path to config file.
 #' @examples
@@ -19,7 +19,7 @@
 #' findTemplateFile('simpletorque')
 #'
 #' @details
-#' See the batchtools functions \code{batchtools::makeRegistry}. When calling \code{batch.pulsar}, we attempt to use batchtool's default lookup for a config file before calling \code{pulsar::findConfFile}.
+#' See the batchtools functions \code{batchtools::findConfFile} and \code{batchtools::makeRegistry}. When calling \code{batch.pulsar}, we attempt to use batchtool's default lookup for a config file before calling \code{pulsar::findConfFile}.
 #'
 #' For clusters with a queuing submission system, a template file, for
 #' defining worker node resources and executing the batch R code, will need to
@@ -30,6 +30,10 @@ findConfFile <- function(name='') {
  ## if x is not a file
  ## look for config file using batchtools rules,
  ## otherwise, look in the pulsar system package
+
+  conffile <- batchtools::findConfFile()
+  if (!is.na(conffile)) return(conffile)
+
   if (checkmate::testFileExists(name, access = "r"))
     return(fs::path_real(name))
 
@@ -37,10 +41,6 @@ findConfFile <- function(name='') {
   if (nchar(name)==0) name <- '.R'
   else name <- paste0('.', tools::file_path_sans_ext(name), '.R')
 
-#  conffile <- .batchtools_findConfFile()
-  # if (length(conffile)!=0)
-  #   conffile <- conffile
-  # else {
   conffile <- fs::path_real(system.file('config',
                   sprintf('batchtools.conf%s', name), package='pulsar'))
   # }
@@ -60,7 +60,7 @@ findConfFile <- function(name='') {
 #'  }
 #' @seealso findConfFile
 #' @details
-#' See the batchtools functions \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc, to employ batchtools' default lookup scheme for template files. Supply the output of this function to the \code{template} argument to override batchtool's default.
+#' See the batchtools functions \code{batchtools::findTemplateFile}, \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc, to employ batchtools' default lookup scheme for template files. Supply the output of this function to the \code{template} argument to override batchtools' default.
 #'
 #' In this case we look for "[name].tmpl" in the pulsar installation directory in the subfolder "templates".
 #' @export

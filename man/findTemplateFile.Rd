@@ -13,7 +13,7 @@ findTemplateFile(name)
 Find a config file from batchtools or default file from pulsar
 }
 \details{
-See the batchtools functions \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc, to employ batchtools' default lookup scheme for template files. Supply the output of this function to the \code{template} argument to override batchtool's default.
+See the batchtools functions \code{batchtools::findTemplateFile}, \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc, to employ batchtools' default lookup scheme for template files. Supply the output of this function to the \code{template} argument to override batchtools' default.
 
 In this case we look for "[name].tmpl" in the pulsar installation directory in the subfolder "templates".
 }

@@ -242,10 +242,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
 .get_batchtools_conffile <- function(conffile) {
   ## try to eval batchtools' default for makeRegistry
   ## otherwise use pulsar's findConfFile
-  defconffile <- tryCatch(
-      eval(formals(batchtools::makeRegistry)$conf.file,
-           envir=loadNamespace('batchtools')),
-                      error=function(e) NULL)
+  defconffile <- batchtools::findConfFile()
   if (length(defconffile)==0 || is.null(defconffile))
     defconffile <- findConfFile(conffile)
   defconffile
@@ -255,7 +252,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
 batchply <- function(data, estFun, fun, fargs, ind.sample, wkdir, regdir,
                      conffile, job.res) {
   reg <- batchtools::makeRegistry(file.dir=regdir, work.dir=wkdir,
-                                  conf.file=.get_batchtools_conffile(conffile))
+                                  conf.file=findConfFile(conffile))
   args <- list(fargs=fargs, data=data, fun=fun)
   id   <- batchtools::batchMap(estFun, ind.sample, more.args=args, reg=reg)
   doneSub <- batchtools::submitJobs(reg=reg, resources=job.res)

@@ -41,7 +41,7 @@ library(pulsar)
 ```
 
 ```{r, eval=FALSE, echo=!README}
-install.packages('pulsar')
+# install.packages('pulsar')
 ## uncomment below for the dev version
 # library(devtools)
 # install_github("zdk123/pulsar")
@@ -50,7 +50,7 @@ library(pulsar)
 
 ## Basic usage
 
-For this readme, we will use synthetic data generated from the `huge` package.
+In this example, we will use synthetic data generated from the `huge` package.
 
 ```{r, eval=pulsarchunks, message=FALSE}
 library(huge)
@@ -69,10 +69,8 @@ time1    <- system.time(
 out.p    <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
                    criterion='stars', seed=10010))
 fit.p    <- refit(out.p)
-```
 
-Inspect the output:
-```{r, eval=TRUE, message=FALSE}
+## Inspect the output ##
 out.p
 fit.p
 ```
@@ -88,7 +86,7 @@ out.b <- pulsar(dat$data, fun=huge, fargs=hugeargs, rep.num=20,
 
 Compare runtimes and StARS-selected lambda index for each method.
 
-```{r, eval=TRUE}
+```{r, eval=pulsarchunks}
 time2[[3]] < time1[[3]]
 opt.index(out.p, 'stars') == opt.index(out.b, 'stars')
 ```
@@ -135,20 +133,19 @@ fit.q2 <- refit(out.q2)
 
 Compare model error by relative Hamming distances between refit adjacency matrices and the true graph and visualize the results:
 
-```{r, eval=TRUE, fig.width=12, fig.height=6, message=FALSE}
+```{r, eval=pulsarchunks, fig.width=12, fig.height=6, message=FALSE}
 plot(out.q2, scale=TRUE)
 ```
 
-```{r, eval=TRUE, fig.width=18, fig.height=6, message=FALSE}
+```{r, eval=pulsarchunks, fig.width=18, fig.height=6, message=FALSE}
 starserr <- sum(fit.q2$refit$stars != dat$theta)/p^2
 gcderr   <- sum(fit.q2$refit$gcd   != dat$theta)/p^2
 gcderr < starserr
 
 ## install.packages('network')
-library(network)
-truenet  <- network(dat$theta)
-starsnet <- network(summary(fit.q2$refit$stars))
-gcdnet   <- network(summary(fit.q2$refit$gcd))
+truenet  <- network::network(as.matrix(dat$theta))
+starsnet <- network::network(summary(fit.q2$refit$stars))
+gcdnet   <- network::network(summary(fit.q2$refit$gcd))
 par(mfrow=c(1,3))
 coords <- plot(truenet, usearrows=FALSE, main="TRUE")
 plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
@@ -169,7 +166,7 @@ This also means we will need access to a writable directory to write intermediat
 
 For generating batchtools, we need a configuration file (supply a path string to `conffile` argument, a good choice is the working directory) and, for an hpc with a queuing system, a template file. Example config (batchtools.conf.torque.R) and PBS template file (simpletorque.tmpl) for Torque can be found in the inst/config/ and inst/templates/ subdirectories of this repo, respectively. See the [batchtools help page](https://mllg.github.io/batchtools/articles/batchtools.html) for creating templates for other systems.
 
-For this README I suggest using batchtools interactive clusters (serial) mode to get things up and running.
+For this example I suggest using batchtools interactive clusters (serial) mode to get things up and running.
 The necessary config file is included in this package.
 
 ```{r, eval=getconfig}
@@ -178,11 +175,12 @@ conffile <- pulsar::findConfFile()
 
 Since batchtools is not imported by `pulsar`, it needs to be loaded.
 Verbosity and progressbar options for batchtools is set by global options.
-Uncomment `cleanup=TRUE` to remove registry directory (useful if running through this readme multiple times).
+Uncomment `cleanup=TRUE` to remove registry directory (useful if running through the example code multiple times).
 
 ```{r, eval=pulsarchunks, message=FALSE}
 ## uncomment below if batchtools is not already installed
 # install.packages('batchtools')
+library(batchtools)
 options(batchtools.progress=TRUE, batchtools.verbose=FALSE)
 out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
                           criterion='stars', seed=10010 #, cleanup=TRUE
@@ -191,7 +189,7 @@ out.batch <- batch.pulsar(dat$data, fun=quicr, fargs=quicargs, rep.num=100,
 
 Check that we get the same result from batch mode pulsar:
 
-```{r, eval=TRUE, message=FALSE}
+```{r, eval=pulsarchunks, message=FALSE}
 opt.index(out.q, 'stars') == opt.index(out.batch, 'stars')
 ```
 
@@ -201,7 +199,7 @@ require costly computation outside the lambda bounds, e.g., when some of the pro
 
 To keep the initial two jobs separate from the rest, the string provided to the `init` argument
 ("subtwo" by default) is concatenated to the basename of `regdir`. The registry/id is returned
-but named `init.reg` and `init.id` from `batch.pulsar`.
+but named `init.reg` and `init.id` from `batch.pulsar`. If missing (the default), a random string is used for both registries.
 
 
 ```{r, eval=pulsarchunks, message=FALSE}
@@ -211,7 +209,7 @@ out.bbatch <- update(out.batch, criterion=c('stars', 'gcd'),
 
 Check that we get the same result from bounded/batch mode pulsar:
 
-```{r, eval=TRUE, message=FALSE}
+```{r, eval=pulsarchunks, message=FALSE}
 opt.index(out.bbatch, 'stars') == opt.index(out.batch, 'stars')
 ```
 
@@ -233,5 +231,6 @@ for jobs.
 complete, a warning will be given, but `pulsar` will complete the run and summary statistics will be
 computed only over the successful jobs (with normalization constants appropriately adjusted).
 It is up to the user to re-start `pulsar` if there is a sampling-dependent reason for job failure, e.g., when an outlier data point increases computation time or graph density and insufficient resources are allocated.
+
 
 ## References
