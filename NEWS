@@ -1,3 +1,20 @@
+pulsar 0.3.3 (06-2018 Release)
+==============
+
+* Fixed tests that violated CRAN policy
+* Changed internals method for resolving to batchtools (v0.9.10) default when sourcing a config file
+* Fixed refit criterion in 'other-criteria' vignette
+
+
+pulsar 0.3.2 (03-2018 Release)
+==============
+
+Changes:
+
+* Fixed tests that were failing on Windows.
+* Fixed a few typos in the docs.
+
+
 pulsar 0.3.0 (02-2018 Release)
 ==============
 

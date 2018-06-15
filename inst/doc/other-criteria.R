@@ -54,7 +54,7 @@ points(lams, out$sufficiency$merge[4,], type='l', col='red')
 dat <- huge.generator(n, p, 'hub', verbose=FALSE, v=.1, u=.4)
 out.diss  <- pulsar(dat$data, fargs=list(lambda=lams, verbose=FALSE),
                     rep.num=20, criterion=c('diss', 'stars'))
-fit <- refit(out.diss)
+fit <- refit(out.diss, 'stars')
 ## Compute the max agglomerative coefficient over the full path
 path.diss <- lapply(fit$est$path, pulsar:::graph.diss)
 library(cluster)
@@ -73,6 +73,6 @@ fit.diss <- refit(out.diss)
 
 plot(out.diss)
 par(mfrow=c(1,2))
-plot(network::network(fit.diss$refit$diss), main='A-AGNES')
-plot(network::network(fit.diss$refit$stars), main='stars')
+plot(network::network(as.matrix(fit.diss$refit$diss)), main='A-AGNES')
+plot(network::network(as.matrix(fit.diss$refit$stars)), main='stars')
 

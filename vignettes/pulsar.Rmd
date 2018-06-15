@@ -13,10 +13,11 @@ bibliography: ../inst/gstars.bib
 ```{r, echo = FALSE, eval=TRUE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  cache=TRUE,
   comment = "#"
 )
 library(pulsar)
-pulsarchunks = TRUE
+pulsarchunks = FALSE
 getconfig    = TRUE
 README       = FALSE
 ```

@@ -1,130 +1,3 @@
-#' find config file
-#'
-#' Find a config file from batchtools or default file from pulsar
-#'
-#' @param name name of default config or path to config file. Empty string to use batchtools to search in the file system.
-#' @examples
-#' ## Default config file provided by pulsar runs code in interactive mode
-#' ## This is for testing purposes and executes serially.
-#' findConfFile()
-#' ## Use the parallel package
-#' ## slower than providing the 'ncores' argument to pulsar function, due to
-#' ## the overhead of creating the batchtools registry.
-#' findConfFile('parallel')
-#'
-#' ## Use the snow package to register/execute batch jobs on socket clusters.
-#' findConfFile('snow')
-#' ## Use a TORQUE / PBS queing system. Requires brew template file.
-#' findConfFile('torque')
-#' findTemplateFile('simpletorque')
-#'
-#' @details
-#' A file lookup is executed in the following order, and the first file found will be used
-#' \enumerate{\item File "batchtools.conf.R" in the path specified by the environment variable "R_BATCHTOOLS_SEARCH_PATH".
-#'         \item File "batchtools.conf.R" in the current working directory.
-#'         \item File "config.R" in the OS dependent user configuration directory as reported by via `rappdirs::user_config_dir("batchtools", expand = FALSE)` (e.g., on linux this usually resolves to "~/.config/batchtools/config.R").
-#'         \item ".batchtools.conf.R" in the home directory ("~").
-#'         \item "[name].tmpl" in the pulsar installation directory
-#'              in the subfolder "templates".
-#'    }
-#' For clusters with a queuing submission system, a template file, for
-#' defining worker node resources and executing the batch R code, will need to
-#' be defined somewhere on the system. See \code{\link{findTemplateFile}}.
-#'
-#' @seealso \code{\link{findTemplateFile}}
-#' @importFrom utils getFromNamespace
-#' @export
-findConfFile <- function(name='') {
- ## if x is not a file
- ## look for config file using batchtools rules,
- ## otherwise, look in the pulsar system package
-  if (file.exists(name)) return(name)
-
-  ## append type to file extension for default config files
-  if (nchar(name)==0) name <- '.R'
-  else name <- paste0('.', name, '.R')
-
-  ## get non enameported function
-  conffile <- getFromNamespace('findConfFile', 'batchtools')()
-  if (length(conffile)!=0)
-    conffile <- gsub(".R", name, conffile)
-  else {
-    conffile <- system.file('config',
-                  sprintf('batchtools.conf%s', name), package='pulsar')
-  }
-  if (file.exists(conffile)) return(conffile)
-  else return(character(0))
-}
-
-#' find template file
-#'
-#' Find a config file from batchtools or default file from pulsar
-#'
-#' @param name name of default template or path to template file. Empty string to use batchtool to search in the file system.
-#' @importFrom utils getFromNamespace
-#' @seealso findConfFile
-#' @details
-#' Similar to the recipe used for template lookup in \code{batchtools::makeClusterFunctionsTORQUE}, \code{batchtools::makeClusterFunctionsSGE}, etc.
-#'
-#' Either a path to a ‘brew’ template file (with extension
-#'          "tmpl"), or a short descriptive name enabling the following
-#'          heuristic for the file lookup:
-#'
-#'    \enumerate{
-#'      \item "batchtools.[name].tmpl" in the path specified by the
-#'              environment variable "R_BATCHTOOLS_SEARCH_PATH".
-#'
-#'      \item "batchtools.[name].tmpl" in the current working
-#'              directory.
-#'
-#'      \item "[name].tmpl" in the user config directory (see
-#'              ‘user_config_dir’); on linux this is usually
-#'              "~/.config/batchtools/[template].tmpl".
-#'
-#'       \item ".batchtools.[name].tmpl" in the home directory.
-#'
-#'      \item "[name].tmpl" in the batchtools installation directory
-#'              in the subfolder "templates".
-#'
-#'      \item "[name].tmpl" in the pulsar installation directory
-#'              in the subfolder "templates".
-#'    }
-#' @export
-findTemplateFile <- function(name) {
-  ## get non exported function
-  fTF <- getFromNamespace('findTemplateFile', 'batchtools')
-  x   <- tryCatch(fTF(name), error=function(e) '')
-  if (file.exists(x)) return(x)
-  else {
-    x <- system.file("templates", sprintf("%s.tmpl", name), package = "pulsar")
-    if (file.exists(x)) return(x)
-    else {
-      stop(sprintf('Argument \'template\' (=\\"%s\\") must point to a template file or contain the template itself as string (containing at least one newline', name))
-    }
-  }
-}
-
-### Function deprecated by batchtools
-# #' Generate a string for a temporary directory
-# #'
-# #' Generate a string to create a random temporary directory, in a platform indepdendent manner. By default, this directory will live under the subdirectory of the per-session temporary directory given by \code{tempdir} from base R.
-# #'
-# #' @param base the base path for the temporary directory.
-# #' @param len the number of letters to randomly generate the directory name
-# #' @param fsep the path separator to use (platform dependent)
-#
-# #' @details This function creates a random path intended for temporary directories. E.g. for testing pulsar's batch mode. This function is useful if you need a safe place to store (and delete) files without endangering important directories or R's per session tmp directory, given by \code{tempdir}, which may be needed for other uses.
-#
-# #' @return a character vector representing a file path for a randomly generated directory.
-# #' @seealso batch.pulsar
-# #' @export
-# getTempDir <- function(base=tempdir(), len=6, fsep=.Platform$file.sep) {
-#     file.path(base,
-#         paste("Rtmp", toupper(paste(sample(letters, len, replace=TRUE), collapse="")),
-#               sep=""), fsep=fsep)
-# }
-
-
 #' pulsar: batch mode
 #'
 #' Run pulsar using stability selection, or another criteria, to select an undirected graphical model over a lambda-path.
@@ -192,6 +65,9 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
                     wkdir=getwd(), regdir=NA, init="init", conffile='',
                     job.res=list(), cleanup=FALSE) {
 
+    if (!requireNamespace('batchtools', quietly=TRUE)) {
+      stop("'batchtools' package required to run 'batch.pulsar'")
+    }
     gcinfo(FALSE)
     if (!is.na(regdir))
       if (file.exists(regdir)) stop('Registry directory already exists')
@@ -363,10 +239,20 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
 }
 
 #' @keywords internal
+.get_batchtools_conffile <- function(conffile) {
+  ## try to eval batchtools' default for makeRegistry
+  ## otherwise use pulsar's findConfFile
+  defconffile <- batchtools::findConfFile()
+  if (length(defconffile)==0 || is.null(defconffile))
+    defconffile <- findConfFile(conffile)
+  defconffile
+}
+
+#' @keywords internal
 batchply <- function(data, estFun, fun, fargs, ind.sample, wkdir, regdir,
                      conffile, job.res) {
-#    BatchJobs::loadConfig(conffile)
-  reg <- batchtools::makeRegistry(file.dir=regdir, work.dir=wkdir, conf.file=conffile)
+  reg <- batchtools::makeRegistry(file.dir=regdir, work.dir=wkdir,
+                                  conf.file=findConfFile(conffile))
   args <- list(fargs=fargs, data=data, fun=fun)
   id   <- batchtools::batchMap(estFun, ind.sample, more.args=args, reg=reg)
   doneSub <- batchtools::submitJobs(reg=reg, resources=job.res)

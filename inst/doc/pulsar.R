@@ -82,10 +82,9 @@ gcderr   <- sum(fit.q2$refit$gcd   != dat$theta)/p^2
 gcderr < starserr
 
 ## install.packages('network')
-library(network)
-truenet  <- network(dat$theta)
-starsnet <- network(summary(fit.q2$refit$stars))
-gcdnet   <- network(summary(fit.q2$refit$gcd))
+truenet  <- network::network(as.matrix(dat$theta))
+starsnet <- network::network(summary(fit.q2$refit$stars))
+gcdnet   <- network::network(summary(fit.q2$refit$gcd))
 par(mfrow=c(1,3))
 coords <- plot(truenet, usearrows=FALSE, main="TRUE")
 plot(starsnet, coord=coords, usearrows=FALSE, main="StARS")
