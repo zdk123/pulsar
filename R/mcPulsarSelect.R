@@ -51,6 +51,7 @@
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
+#' @param refit Should the model be fit with all the data after pulsar is run?
 #' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -104,7 +105,7 @@
 #' @export
 pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
                   thresh = 0.1, subsample.ratio = NULL, rep.num = 20, seed=NULL,
-                  lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
+                  lb.stars=FALSE, ub.stars=FALSE, ncores = 1, refit=TRUE)  {
   gcinfo(FALSE)
   n <- nrow(data)
   p <- ncol(data)
@@ -116,31 +117,38 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
   subsample.ratio <- .ratcheck(subsample.ratio, n)
 
   if (!is.null(seed)) set.seed(seed)
-  ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio),
+  ind.sample <- replicate(rep.num, sample(c(1L:n), floor(n * subsample.ratio),
                   replace = FALSE), simplify=FALSE)
+  if (refit) {
+    m <- rep.num + 1
+    ind.sample[[m]] <- 1L:n
+    attr(ind.sample[[m]], 'last') <- TRUE
+  }
   if (!is.null(seed)) set.seed(NULL)
   estFun <- function(ind.sample, fargs) {
     tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
     if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member')
-    return(tmp$path)
+
+    if (isTRUE(attr(ind.sample, 'last')))
+      return(tmp)
+    else
+      return(tmp$path)
   }
 
   if (lb.stars) {
     if (!("stars" %in% criterion))
       stop('Lower/Upper bound method must be used with StARS')
     minN <- 2 # Hard code for now
-  } else
-      minN <- rep.num
+  } else minN <- rep.num + refit
 
   isamp <- ind.sample[1:minN]
   ## TODO: set global options for mc.* args to parallel::mclapply
   premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
 
-
   if (lb.stars) {
     lb.premerge       <- premerge
-    lb.premerge.reord <- lapply(1:nlams, function(i)
-                         lapply(1:minN,  function(j) lb.premerge[[j]][[i]]))
+    lb.premerge.reord <- lapply(1L:nlams, function(i)
+                         lapply(1L:minN,  function(j) lb.premerge[[j]][[i]]))
 
     lb.est <- stars.stability(lb.premerge.reord, thresh, minN, p)
     if (lb.est$opt.index == 1)
@@ -160,10 +168,12 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     nlams <- length(fargs$lambda)
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
-    isamp <- ind.sample[-(1:minN)]
+    isamp <- ind.sample[-(1L:minN)]
     tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
     premerge <- c(lb.premerge, tmp)
   }
+  fullmodel <- premerge[rep.num + 1]
+  premerge  <- premerge[1:rep.num]
 
   premerge.reord <- lapply(1:nlams, function(i)
                     lapply(1:rep.num, function(j) premerge[[j]][[i]]))
@@ -232,6 +242,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
   }
   est$call  <- match.call()
   est$envir <- parent.frame()
+  est$est   <- fullmodel[[1]]
   return(structure(est, class="pulsar"))
 }
 
