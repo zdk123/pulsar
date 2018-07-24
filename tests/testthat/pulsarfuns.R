@@ -56,7 +56,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
 
     test_that("pulsar bounds are consistent", {
         ## check lengths
-##        expect_equal(length(out$gcd$summary), length(out$stars$summary))
+##      expect_equal(length(out$gcd$summary), length(out$stars$summary))
         expect_equal(outb$gcd$criterion, "graphlet.stability")
         expect_error(fit <- refit(out, 'stars'), NA)
 
