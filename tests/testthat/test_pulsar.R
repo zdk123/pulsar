@@ -12,10 +12,7 @@ dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.4, u=.2)
 set.seed(rseed)
 dat$data <- MASS::mvrnorm(p*100, mu=rep(0,p), Sigma=dat$sigma, empirical=TRUE)
 
-fp    <- batchtools:::fp
-npath <- function(x) normalizePath(x, mustWork=FALSE, winslash="/")
-homedir <- npath(fp("~"))
-
+tmpdir <- fs::path_real(tempdir())
 conffile <- ""
 
 ######################################################
@@ -30,13 +27,13 @@ quic.serial <- runtests(pulsar, "pulsar", dat, fun=quicr, fargs=list(), seed=rse
 context("pulsar: huge, batch mode")
 huge.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge,
                 fargs=list(verbose=FALSE, scr=TRUE), conffile=conffile,
-                cleanup=TRUE, seed=rseed, wkdir=homedir)
+                cleanup=TRUE, seed=rseed, wkdir=tmpdir)
 
 # ######################################################
 context("pulsar: quic, batch mode")
 quic.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr,
                     fargs=list(), conffile=conffile, cleanup=TRUE,
-                    seed=rseed, wkdir=homedir)
+                    seed=rseed, wkdir=tmpdir)
 
 ######################################################
 context("pulsar: serial vs batch")
