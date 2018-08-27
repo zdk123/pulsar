@@ -21,18 +21,17 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
                        criterion=c("estrada", "sufficiency")))
     })
 
-
     test_that("weird lambda path results in correct error or warning", {
         lams <- seq(.5, .7, length.out=5)
         hargs <- c(fargs, list(lambda=lams))
-        expect_warning(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=2,
+        expect_warning(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=3,
                        ...), "lambda path")
         expect_warning(out <- pfun(dat$data, fun=fun,
-              fargs=c(list(lambda=lams[1]), fargs), rep.num=2, ...),"1 value")
+              fargs=c(list(lambda=lams[1]), fargs), rep.num=3, ...), "1 value")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=c(list(lams=lams),
-                fargs), rep.num=2), "missing")
+                fargs), rep.num=3), "missing")
         expect_warning(out <- pfun(dat$data, fun=fun,
-              fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=2, ...),
+              fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=3, ...),
                "supplied values")
     })
 

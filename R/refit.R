@@ -45,7 +45,7 @@ refit.pulsar <- function(obj, criterion) {
     names(est) <- c('est', 'refit')
     fin <- getArgs(getCall(obj), getEnvir(obj))
     ## call est function on original dataset
-    if ('est' %in% names(obj)) {
+    if (length(obj$est)) {
       est$est <- obj$est
     } else {
       est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))

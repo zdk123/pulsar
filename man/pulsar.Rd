@@ -32,7 +32,7 @@ pulsar(data, fun = huge::huge, fargs = list(),
 
 \item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.}
 
-\item{refit}{Should the model be fit with all the data after pulsar is run?}
+\item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \link{\code{refit}})}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

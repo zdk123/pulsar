@@ -29,7 +29,7 @@ huge.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge,
                 fargs=list(verbose=FALSE, scr=TRUE), conffile=conffile,
                 cleanup=TRUE, seed=rseed, wkdir=tmpdir)
 
-# ######################################################
+######################################################
 context("pulsar: quic, batch mode")
 quic.batch <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr,
                     fargs=list(), conffile=conffile, cleanup=TRUE,
