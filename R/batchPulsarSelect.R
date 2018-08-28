@@ -8,7 +8,7 @@
 #' @param conffile path to or string that identifies a \code{\link[batchtools]{batchtools}} configuration file. This argument is passed directly to the \code{name} argument of the \code{\link[pulsar]{findConfFile}} function. See that help for detailed explanation.
 #' @param job.res named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example
 #' @param cleanup Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.
-#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \link{\code{refit}})
+#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #' @return an S3 object of class \code{\link{batch.pulsar}} with a named member for each stability criterion/metric. Within each of these are:
 #' \itemize{
 #'    \item summary: the summary criterion over \code{rep.num} graphs at each value of lambda
@@ -64,7 +64,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
                     criterion=c("stars"), thresh = 0.1, subsample.ratio = NULL,
                     lb.stars=FALSE, ub.stars=FALSE, rep.num = 20, seed=NULL,
                     wkdir=getwd(), regdir=NA, init="init", conffile='',
-                    job.res=list(), cleanup=FALSE, refit=FALSE) {
+                    job.res=list(), cleanup=FALSE, refit=TRUE) {
 
     if (!requireNamespace('batchtools', quietly=TRUE)) {
       stop("'batchtools' package required to run 'batch.pulsar'")
@@ -127,7 +127,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     pulsar.jobs <- intersect((1+refit):minN, jdone$job.id)
 
     if (refit) {
-      fullmodel <- loadResult(id=1, reg=reg)
+      fullmodel <- batchtools::loadResult(id=1, reg=reg)
       minN <- minN - 1L
     } else {
       fullmodel <- NULL

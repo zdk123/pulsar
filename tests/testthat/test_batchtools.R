@@ -1,4 +1,4 @@
-context("setup")
+context("setup batchtools test")
 
 suppressPackageStartupMessages(library(batchtools))
 options(batchtools.verbose=FALSE)

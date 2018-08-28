@@ -60,7 +60,7 @@
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.
-#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \link{\code{refit}})
+#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
 #' \itemize{
