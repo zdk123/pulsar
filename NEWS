@@ -1,3 +1,10 @@
+pulsar 0.3.4 (09-2018 Release)
+==============
+
+* Fixed tests based on deprecated batchtools function
+* Added internal refit method for faster parallelization
+
+
 pulsar 0.3.3 (06-2018 Release)
 ==============
 
