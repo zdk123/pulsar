@@ -8,6 +8,7 @@
 #' @param conffile path to or string that identifies a \code{\link[batchtools]{batchtools}} configuration file. This argument is passed directly to the \code{name} argument of the \code{\link[pulsar]{findConfFile}} function. See that help for detailed explanation.
 #' @param job.res named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example
 #' @param cleanup Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.
+#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #' @return an S3 object of class \code{\link{batch.pulsar}} with a named member for each stability criterion/metric. Within each of these are:
 #' \itemize{
 #'    \item summary: the summary criterion over \code{rep.num} graphs at each value of lambda
@@ -63,7 +64,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
                     criterion=c("stars"), thresh = 0.1, subsample.ratio = NULL,
                     lb.stars=FALSE, ub.stars=FALSE, rep.num = 20, seed=NULL,
                     wkdir=getwd(), regdir=NA, init="init", conffile='',
-                    job.res=list(), cleanup=FALSE) {
+                    job.res=list(), cleanup=FALSE, refit=TRUE) {
 
     if (!requireNamespace('batchtools', quietly=TRUE)) {
       stop("'batchtools' package required to run 'batch.pulsar'")
@@ -79,37 +80,58 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     .lamcheck(fargs$lambda)
     .critcheck0(criterion, knowncrits)
     subsample.ratio <- .ratcheck(subsample.ratio, n)
-    nlams           <- length(fargs$lambda)
+    nlams    <- length(fargs$lambda)
     conffile <- findConfFile(conffile)
 
     if (!is.null(seed)) set.seed(seed)
     ind.sample <- replicate(rep.num, sample(c(1:n),
                     floor(n*subsample.ratio), replace=FALSE), simplify=FALSE)
+    if (refit) {
+      tmp <- 1L:n
+      attr(tmp, 'full') <- TRUE
+      ind.sample <- c(list(tmp), ind.sample)
+    }
     if (!is.null(seed)) set.seed(NULL)
 
     ## build the estimator function that takes the randomized sample index
     ## and the full data
     estFun <- function(ind.sample, fargs, data, fun) {
-      estsub <- do.call(fun, c(fargs, list(data[ind.sample,])))
-      if (is.null(getElement(estsub, 'path')))
+      tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
+      if (!('path' %in% names(tmp)))
         stop('Error: expected data stucture with \'path\' member')
-      return(estsub$path)
+
+      if (isTRUE(attr(ind.sample, 'full')))
+        return(tmp)
+      else
+        return(tmp$path)
     }
+
 
     est <- list()
     reduceargs <- list() ; reduceGCDargs <- list()
     if (lb.stars) {
       if (!("stars" %in% criterion)) # || length(criterion)>1)
         stop('Lower/Upper bound method must be used with StARS')
-      minN   <- 2
+      minN   <- 2 + refit
       if (!is.na(regdir)) regdir <- paste(regdir, init, sep="_")
     } else
-        minN <- rep.num
+        minN <- rep.num + refit
 
     isamp <- ind.sample[1:minN]
-    out <- batchply(data,estFun,fun,fargs,isamp,wkdir,regdir,conffile,job.res)
+    out <- batchply(data, estFun, fun, fargs, isamp,
+                    wkdir, regdir, conffile, job.res)
     reg <- out$reg ; id  <- out$id
+    ## jobs w/ no errors
+    doneRun <- batchtools::waitForJobs(reg=reg, id)
+    jdone   <- batchtools::findDone(reg=reg, id)
+    pulsar.jobs <- intersect((1+refit):minN, jdone$job.id)
 
+    if (refit) {
+      fullmodel <- batchtools::loadResult(id=1, reg=reg)
+      minN <- minN - 1L
+    } else {
+      fullmodel <- NULL
+    }
     ## Use this for stars crits
     starsaggfun <- function(res, aggr)
       lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]])
@@ -117,19 +139,18 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     if (lb.stars) {
       est$init.reg <- reg ; est$init.id  <- id
 
-      doneRun <- batchtools::waitForJobs(reg=reg, id)
       if (!doneRun)
         stop('Errors in batch jobs for computing initial stability')
 
       # collect initial results
-      lb.starsmerge <- batchtools::reduceResults(reg=reg, fun=starsaggfun)
+      lb.starsmerge <- batchtools::reduceResults(reg=reg, ids=pulsar.jobs, fun=starsaggfun)
       lb.est <- stars.stability(NULL, thresh, minN, p, lb.starsmerge)
       gc(FALSE)
       # compute initial gcd if selected
       if ('gcd' %in% criterion) {
         aggfun <- function(job, res) lapply(res, gcvec)
         lb.gcdpremerge <- do.call(batchtools::reduceResultsList,
-                           c(list(reg=reg, fun=aggfun), reduceGCDargs))
+                           c(list(reg=reg, ids=pulsar.jobs, fun=aggfun), reduceGCDargs))
       }
       if (cleanup) unlink(reg$file.dir, recursive=TRUE)
       if (lb.est$opt.index == 1)
@@ -158,15 +179,14 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       regdir <- gsub(paste("_", init, sep=""), "", regdir)
       ## Run graph estimation on the rest of the subsamples
       isamp <- ind.sample[-(1:minN)]
-      out   <- batchply(data, estFun, fun, fargs, isamp, wkdir,
-                        regdir, conffile, job.res)
+      out   <- batchply(data, estFun, fun, fargs, isamp,
+                        wkdir, regdir, conffile, job.res)
       reg <- out$reg ; id <- out$id
+      doneRun <- batchtools::waitForJobs(reg=reg, id)
+      jdone   <- batchtools::findDone(reg=reg, id)
+      pulsar.jobs <- intersect((1+refit):rep.num, jdone$job.id)
     }
-
-    ## jobs w/ no errors
-    doneRun <- batchtools::waitForJobs(reg=reg, id)
-    jdone   <- batchtools::findDone(reg=reg, id)
-    rep.num <- length(jdone$job.id) # adjust denominator to successfull jobs
+    rep.num <- length(pulsar.jobs) # adjust denominator to successfull jobs
     if (lb.stars) rep.num <- rep.num + minN
     if (!doneRun)
       warning(paste("Only", jdone, "jobs completed... proceeding anyway"))
@@ -176,14 +196,14 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       if (crit == "stars") {
         ## Reduce results, include init estimate from N=2 if lb/ub is used ##
         starsmerge <- do.call(batchtools::reduceResults,
-                         c(list(reg=reg, fun=starsaggfun), reduceargs))
+                         c(list(reg=reg, ids=pulsar.jobs, fun=starsaggfun), reduceargs))
         est$stars  <- stars.stability(NULL, thresh, rep.num, p, starsmerge)
       }
 
       if (crit == "gcd") {
         gcdaggfun   <- function(res) lapply(res, gcvec)
         gcdpremerge <- c(reduceGCDargs$init,
-                        batchtools::reduceResultsList(reg=reg, fun=gcdaggfun))
+                        batchtools::reduceResultsList(reg=reg, ids=pulsar.jobs, fun=gcdaggfun))
         gcdmerge    <- lapply(1:nlams, function(i) dist(t(sapply(1:rep.num, function(j) gcdpremerge[[j]][[i]]))))
         est$gcd <- gcd.stability(NULL, thresh, rep.num, p, nlams, gcdmerge)
       }
@@ -234,6 +254,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       }
     }
     est$call  <- match.call()
+    est$est   <- fullmodel
     est$envir <- parent.frame()
     return(structure(est, class = c("batch.pulsar", "pulsar")))
 }

@@ -45,7 +45,12 @@ refit.pulsar <- function(obj, criterion) {
     names(est) <- c('est', 'refit')
     fin <- getArgs(getCall(obj), getEnvir(obj))
     ## call est function on original dataset
-    est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))
+    if (length(obj$est)) {
+      est$est <- obj$est
+    } else {
+      est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))
+    }
+
     if (missing(criterion)) criterion <- eval(fin$criterion)
     est$refit <- vector('list', length(criterion))
     names(est$refit) <- criterion
@@ -61,6 +66,11 @@ refit.pulsar <- function(obj, criterion) {
           warning(paste('Unknown criterion', crit, sep=" "), call.=FALSE)
       }
     }
+
+    ## TODO: if fun is null, get formal arg of obj
     est$fun <- obj$call$fun
+    if (is.null(est$fun))
+      est$fun <- formals(class(obj))$fun
+
     structure(est, class='pulsar.refit')
 }

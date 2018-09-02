@@ -37,6 +37,14 @@
 
 }
 
+#' @keywords internal
+.tlist <- function(li, n, m) {
+  if (missing(m)) m <- length(li)
+  lapply(1L:n, function(i) {
+    lapply(1L:m, function(j) li[[j]][[i]])
+  })
+}
+
 #' pulsar: serial or parallel mode
 #'
 #' Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
@@ -52,6 +60,7 @@
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.
+#' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
 #' \itemize{
@@ -102,9 +111,12 @@
 #' @references Zhao, T., Liu, H., Roeder, K., Lafferty, J., & Wasserman, L. (2012). The huge Package for High-dimensional Undirected Graph Estimation in R. The Journal of Machine Learning Research, 13, 1059–1062.
 #' @seealso \code{\link{batch.pulsar}} \code{\link{refit}}
 #' @export
-pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
-                  thresh = 0.1, subsample.ratio = NULL, rep.num = 20, seed=NULL,
-                  lb.stars=FALSE, ub.stars=FALSE, ncores = 1)  {
+pulsar <- function(data, fun=huge::huge, fargs=list(),
+                   criterion=c("stars"),
+                   thresh = 0.1, subsample.ratio = NULL,
+                   rep.num = 20, seed=NULL,
+                   lb.stars=FALSE, ub.stars=FALSE,
+                   ncores = 1, refit=TRUE)  {
   gcinfo(FALSE)
   n <- nrow(data)
   p <- ncol(data)
@@ -116,31 +128,46 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
   subsample.ratio <- .ratcheck(subsample.ratio, n)
 
   if (!is.null(seed)) set.seed(seed)
-  ind.sample <- replicate(rep.num, sample(c(1:n), floor(n * subsample.ratio),
+  ind.sample <- replicate(rep.num,
+                  sample(c(1L:n), floor(n * subsample.ratio),
                   replace = FALSE), simplify=FALSE)
+  if (refit) {
+    tmp <- 1L:n
+    attr(tmp, 'full') <- TRUE
+    ind.sample <- c(list(tmp), ind.sample)
+  }
   if (!is.null(seed)) set.seed(NULL)
+  ## wrap estimator
   estFun <- function(ind.sample, fargs) {
     tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
-    if (is.null(tmp$path)) stop('Error: expected data stucture with \'path\' member')
-    return(tmp$path)
+    if (!('path' %in% names(tmp)))
+      stop('Error: expected data stucture with \'path\' member')
+
+    if (isTRUE(attr(ind.sample, 'full')))
+      return(tmp)
+    else
+      return(tmp$path)
   }
 
   if (lb.stars) {
     if (!("stars" %in% criterion))
       stop('Lower/Upper bound method must be used with StARS')
-    minN <- 2 # Hard code for now
-  } else
-      minN <- rep.num
+    minN <- 2L + refit # Hard code for now
+  } else minN <- rep.num + refit
 
-  isamp <- ind.sample[1:minN]
+  isamp <- ind.sample[1L:minN]
   ## TODO: set global options for mc.* args to parallel::mclapply
   premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
-
+  if (refit) {
+    fullmodel <- premerge[[1]]
+    premerge  <- premerge[-1]
+    minN <- minN - 1
+  } else fullmodel <- NULL
 
   if (lb.stars) {
     lb.premerge       <- premerge
-    lb.premerge.reord <- lapply(1:nlams, function(i)
-                         lapply(1:minN,  function(j) lb.premerge[[j]][[i]]))
+    lb.premerge.reord <- lapply(1L:nlams, function(i)
+                         lapply(1L:minN, function(j) lb.premerge[[j]][[i]]))
 
     lb.est <- stars.stability(lb.premerge.reord, thresh, minN, p)
     if (lb.est$opt.index == 1)
@@ -160,17 +187,16 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     nlams <- length(fargs$lambda)
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
-    isamp <- ind.sample[-(1:minN)]
+    isamp <- ind.sample[-(1L:(minN+refit))]
     tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
     premerge <- c(lb.premerge, tmp)
   }
 
-  premerge.reord <- lapply(1:nlams, function(i)
-                    lapply(1:rep.num, function(j) premerge[[j]][[i]]))
+  premerge.reord <- .tlist(premerge, nlams, rep.num)
   rm(premerge) ; gc()
   est <- list()
 
-  for (i in 1:length(criterion)) {
+  for (i in 1L:length(criterion)) {
     crit <- criterion[i]
 
     if (crit == "stars")
@@ -197,10 +223,10 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
 #      else if (crit == "vgraphlet")
 #        est$vgraphlet <- vgraphlet.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-    else if (crit == "gcd")
+    else if (crit == "gcd") {
       est$gcd <- gcd.stability(premerge.reord, thresh, rep.num, p, nlams)
 
-    else if (crit == "nc")
+    } else if (crit == "nc")
       est$nc <- nc.stability(premerge.reord, thresh, rep.num, p, nlams)
 
   }
@@ -220,8 +246,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
     est$stars$merge <- tmpmerg
 
     est$stars$lb.index  <- lb.est$opt.index
-    est$stars$ub.index  <- ub.index #min(, est$stars$opt.index)
-    est$stars$opt.index <- est$stars$opt.index + ub.index - 1
+    est$stars$ub.index  <- ub.index
+    est$stars$opt.index <- est$stars$opt.index + ub.index - 1L
   }
 
   if ("stars" %in% criterion) {
@@ -232,6 +258,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(), criterion=c("stars"),
   }
   est$call  <- match.call()
   est$envir <- parent.frame()
+  est$est   <- fullmodel
   return(structure(est, class="pulsar"))
 }
 
@@ -354,7 +381,6 @@ gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL) {
 
     est$summary <- vector('numeric', nlams)
     for (i in 1:nlams) est$summary[i] <- mean(est$merge[[i]])
-
     est$criterion <- "graphlet.stability"
     return(est)
 }

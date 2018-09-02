@@ -4,9 +4,10 @@
 \alias{pulsar}
 \title{pulsar: serial or parallel mode}
 \usage{
-pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
-  thresh = 0.1, subsample.ratio = NULL, rep.num = 20, seed = NULL,
-  lb.stars = FALSE, ub.stars = FALSE, ncores = 1)
+pulsar(data, fun = huge::huge, fargs = list(),
+  criterion = c("stars"), thresh = 0.1, subsample.ratio = NULL,
+  rep.num = 20, seed = NULL, lb.stars = FALSE, ub.stars = FALSE,
+  ncores = 1, refit = TRUE)
 }
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
@@ -30,6 +31,8 @@ pulsar(data, fun = huge::huge, fargs = list(), criterion = c("stars"),
 \item{ub.stars}{Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
 \item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.}
+
+\item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

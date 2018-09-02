@@ -1,4 +1,4 @@
-context("setup")
+context("setup batchtools test")
 
 suppressPackageStartupMessages(library(batchtools))
 options(batchtools.verbose=FALSE)
@@ -46,22 +46,25 @@ fargs <- list(lambda=lams)
 
 test_that("batch.pulsar options", {
 
-  ## set wd to home
-  suppressWarnings(est <- batch.pulsar(dat$data, huge::huge, fargs, rep.num=3, lb.stars=TRUE, wkdir=tmpdir))
-  expect_true(file.exists(est$reg$file.dir))
-  expect_true(file.exists(est$init.reg$file.dir))
-  expect_equivalent(est$id$job.id, 1)
-  expect_equivalent(est$init.id$job.id, 1:2)
-  expect_equal(est$init.reg$work.dir, fs::path_real(tmpdir))
-  expect_equal(est$reg$work.dir, fs::path_real(tmpdir))
+  test_all <- function(est, ind=1:2, cleanup=FALSE) {
+    expect_true(!cleanup*file.exists(est$reg$file.dir))
+    expect_true(!cleanup*file.exists(est$init.reg$file.dir))
+    expect_equivalent(est$id$job.id, 1)
+    expect_equivalent(est$init.id$job.id, ind)
+    expect_equal(est$init.reg$work.dir, fs::path_real(tmpdir))
+    expect_equal(est$reg$work.dir, fs::path_real(tmpdir))
+  }
+  suppressWarnings(
+    est <- batch.pulsar(dat$data, huge::huge, fargs,
+            rep.num=3, lb.stars=TRUE, wkdir=tmpdir, refit=FALSE))
+  test_all(est)
 
+  # suppressWarnings(
+  #   est <- batch.pulsar(dat$data, huge::huge, fargs,
+  #           rep.num=3, lb.stars=TRUE, wkdir=tmpdir, refit=TRUE))
+  # test_all(est, 1:3)
 
-  suppressWarnings(est <- batch.pulsar(dat$data, huge::huge, fargs, rep.num=3, lb.stars=TRUE, cleanup=TRUE, wkdir=tmpdir))
-  expect_false(file.exists(est$reg$file.dir))
-  expect_false(file.exists(est$init.reg$file.dir))
-  expect_equivalent(est$id$job.id, 1)
-  expect_equivalent(est$init.id$job.id, 1:2)
-  expect_equal(est$init.reg$work.dir, fs::path_real(tmpdir))
-  expect_equal(est$reg$work.dir, fs::path_real(tmpdir))
+  suppressWarnings(est <- batch.pulsar(dat$data, huge::huge, fargs, rep.num=3, lb.stars=TRUE, cleanup=TRUE, wkdir=tmpdir, refit=FALSE))
+  test_all(est, cleanup=TRUE)
 
 })

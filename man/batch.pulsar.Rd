@@ -8,7 +8,7 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
   criterion = c("stars"), thresh = 0.1, subsample.ratio = NULL,
   lb.stars = FALSE, ub.stars = FALSE, rep.num = 20, seed = NULL,
   wkdir = getwd(), regdir = NA, init = "init", conffile = "",
-  job.res = list(), cleanup = FALSE)
+  job.res = list(), cleanup = FALSE, refit = TRUE)
 }
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
@@ -42,6 +42,8 @@ batch.pulsar(data, fun = huge::huge, fargs = list(),
 \item{job.res}{named list of resources needed for each job (e.g. for PBS submission script). The format and members depends on configuration and template. See examples section for a Torque example}
 
 \item{cleanup}{Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.}
+
+\item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})}
 }
 \value{
 an S3 object of class \code{\link{batch.pulsar}} with a named member for each stability criterion/metric. Within each of these are:

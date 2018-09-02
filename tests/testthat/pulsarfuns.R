@@ -21,18 +21,17 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
                        criterion=c("estrada", "sufficiency")))
     })
 
-
     test_that("weird lambda path results in correct error or warning", {
         lams <- seq(.5, .7, length.out=5)
         hargs <- c(fargs, list(lambda=lams))
-        expect_warning(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=2,
+        expect_warning(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=3,
                        ...), "lambda path")
         expect_warning(out <- pfun(dat$data, fun=fun,
-              fargs=c(list(lambda=lams[1]), fargs), rep.num=2, ...),"1 value")
+              fargs=c(list(lambda=lams[1]), fargs), rep.num=3, ...), "1 value")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=c(list(lams=lams),
-                fargs), rep.num=2), "missing")
+                fargs), rep.num=3), "missing")
         expect_warning(out <- pfun(dat$data, fun=fun,
-              fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=2, ...),
+              fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=3, ...),
                "supplied values")
     })
 
@@ -56,7 +55,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
 
     test_that("pulsar bounds are consistent", {
         ## check lengths
-##        expect_equal(length(out$gcd$summary), length(out$stars$summary))
+##      expect_equal(length(out$gcd$summary), length(out$stars$summary))
         expect_equal(outb$gcd$criterion, "graphlet.stability")
         expect_error(fit <- refit(out, 'stars'), NA)
 
@@ -64,9 +63,11 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         expect_equal(outb$stars$opt.ind, out$stars$opt.ind)
 
         ## gcd computed between bounds
-        expect_equal(length(outb$gcd$summary), outb$stars$lb.index-outb$stars$ub.index+1)
-        expect_equal(opt.index(outb, 'stars'), opt.index(out, 'stars')) # same answer using bounds
-
+        expect_equal(length(outb$gcd$summary),
+                    outb$stars$lb.index-outb$stars$ub.index+1)
+        # same answer using bounds
+        expect_equal(opt.index(outb, 'stars'),
+                    opt.index(out, 'stars'))
         ## check F1 score is OK
         opt.index(outb, 'gcd') <- get.opt.index(outb, 'gcd')
         pdf(NULL)
@@ -75,21 +76,34 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         dev.off()
         expect_gte(gcdF1, starsF1)
     })
+
+    # test_that("calling environments are stored correctly", {
+    #   ## test that est parent.frame is current environment
+    #   expect_equal(getEnvir(out), parent.frame())
+    #   expect_equal(getEnvir(outb), parent.frame())
+    # })
+
     return(list(out=out, outb=outb))
-
-    test_that("calling environments are stored correct", {
-      ## test that est parent.frame is current environment
-      expect_equal(getEnvir(out), environment())
-      expect_equal(getEnvir(outb), environment())
-    })
-
 }
 
 
-runcomptest <- function(msg, out, out.batch, ...) {
+runcomptest <- function(msg, out1, out2, ...) {
     test_that(msg, {
-        expect_gt(max(out$stars$summary), 0) # make sure summary isn't trivally zero
-        expect_equivalent(out$stars$summary, out.batch$stars$summary)
+      # make sure summary isn't trivally zero
+        expect_gt(max(out1$stars$summary), 0)
+        expect_equivalent(out1$stars$summary,   out2$stars$summary)
+        expect_equivalent(out1$stars$opt.index, out2$stars$opt.index)
+    })
+}
+
+
+testrefit0 <- function(desc, out) {
+    test_that(desc, {
+        expect_message(fit1 <- refit(out, "stars"), regexp = NA)
+        expect_equal(names(fit1$refit), "stars")
+        expect_warning(fit3 <- refit(out), regexp = NA)
+        expect_gt(sum(fit3$refit$stars), 0)
+        expect_warning(fit4 <- refit(out, "foo"), "Unknown criterion")
     })
 }
 
