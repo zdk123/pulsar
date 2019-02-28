@@ -29,10 +29,13 @@ example, we generate correlated binary data for cheap (compared to Gibbs samplin
 copula functions.
 
 
-```{r, eval=TRUE}
+```{r, eval=TRUE, message=FALSE}
+  library(huge)
+  library(Matrix)
+
   p <- 40
   n <- round(8*p * log(p))
-  library(huge)
+
   set.seed(10010)
   dat <- huge.generator(n, p, 'hub', verbose=FALSE, v=.3, u=.1)
 
