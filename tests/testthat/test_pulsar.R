@@ -6,7 +6,7 @@ options(batchtools.progress=FALSE)
 source('pulsarfuns.R')
 
 rseed <- 10010
-p     <- 28
+p     <- 30
 set.seed(rseed)
 dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.4, u=.2)
 set.seed(rseed)

@@ -18,7 +18,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         expect_error(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=2,
            criterion=c("stars", "foo"), ...), "foo")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=2,
-                       criterion=c("estrada", "sufficiency")))
+                       criterion=c("estrada", "sufficiency"), ...))
     })
 
     test_that("weird lambda path results in correct error or warning", {
@@ -29,7 +29,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         expect_warning(out <- pfun(dat$data, fun=fun,
               fargs=c(list(lambda=lams[1]), fargs), rep.num=3, ...), "1 value")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=c(list(lams=lams),
-                fargs), rep.num=3), "missing")
+                fargs), rep.num=3, ...), "missing")
         expect_warning(out <- pfun(dat$data, fun=fun,
               fargs=c(list(lambda=lams[c(5,4)]), fargs), rep.num=3, ...),
                "supplied values")
@@ -38,7 +38,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     mlam  <- getMaxCov(scale(dat$data))
     lams  <- getLamPath(mlam, 5e-3, 35)
     hargs <- c(fargs, list(lambda=lams))
-    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion="stars", rep.num=6, ...)
+    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion="stars", rep.num=12, ...)
     outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE, criterion=c("stars", "gcd"))
 
     test_that("pulsar w/ lambda path works for fun", {
@@ -91,6 +91,7 @@ runcomptest <- function(msg, out1, out2, ...) {
     test_that(msg, {
       # make sure summary isn't trivally zero
         expect_gt(max(out1$stars$summary), 0)
+        expect_gt(max(out2$stars$summary), 0)
         expect_equivalent(out1$stars$summary,   out2$stars$summary)
         expect_equivalent(out1$stars$opt.index, out2$stars$opt.index)
     })
