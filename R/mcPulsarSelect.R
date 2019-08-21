@@ -200,7 +200,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   } else minN <- rep.num + refit
 
   isamp <- ind.sample[1L:minN]
-  ## don't pass on errors if lb.stars mode
+  ## don't pass on errors if lb.stars = TRUE
   premerge <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
                             mc.preschedule = FALSE, pass.errors = !lb.stars)
   errors <- attr(premerge, 'errors')
