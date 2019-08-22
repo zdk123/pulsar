@@ -37,6 +37,7 @@
 
 }
 
+#' @importFrom parallel mclapply
 #' @keywords internal
 .tlist <- function(li, n, m) {
   if (missing(m)) m <- length(li)
@@ -44,6 +45,49 @@
     lapply(1L:m, function(j) li[[j]][[i]])
   })
 }
+
+#' @keywords internal
+.try_mclapply <- function(X, FUN, mc.cores = getOption("mc.cores", 2L),
+                          pass.errors=TRUE, ...) {
+  ## capture errors/warnings from mclapply
+  warn <- NULL
+  env <- environment()
+  withCallingHandlers({out <- mclapply(X, FUN, mc.cores=mc.cores, ...)},
+                      warning=function(w) {
+                         # why doesn't assignment mode work when ncores>1
+                         assign('warn', c(warn, w$message), env)
+                         invokeRestart("muffleWarning")
+                       })
+  ## handle errors
+  errors <- sapply(out, inherits, what="try-error")
+  if (any(errors)) {
+    error <- table(trimws(sapply(out[errors], '[', 1)))
+    msg   <- paste(sprintf('\n%s job%s failed with: "%s"',
+                  error, ifelse(error>1, 's', ''), names(error)), collapse="" )
+    if (!pass.errors || all(errors)) {
+      stop(msg, call.=FALSE)
+    } else {
+      warning(msg, call.=FALSE)
+      ## continue with successful jobs
+      out <- out[!errors]
+    }
+  } else {
+    ## will only invoke if ncore=1, otherwise mclapply suppresses warnings
+    if (length(warn) > 0) {
+      twarn <- table(trimws(sapply(warn, '[', 1)))
+      msg   <- paste(sprintf('%s job%s had warning: "%s"',
+                              twarn, ifelse(twarn>1, 's', ''), names(twarn)),
+                      collapse="\n")
+      warning(msg, call.=FALSE)
+    }
+  }## no errors detected, continue
+
+  # reset previous warn option
+  # options(warn=warn.opt)
+  attr(out, 'errors') <- errors
+  return(out)
+}
+
 
 #' pulsar: serial or parallel mode
 #'
@@ -156,8 +200,13 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   } else minN <- rep.num + refit
 
   isamp <- ind.sample[1L:minN]
-  ## TODO: set global options for mc.* args to parallel::mclapply
-  premerge <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+  ## don't pass on errors if lb.stars = TRUE
+  premerge <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
+                            mc.preschedule = FALSE, pass.errors = !lb.stars)
+  errors <- attr(premerge, 'errors')
+  # Adjust rep.num for failed jobs
+  rep.num <- rep.num - ifelse(refit, sum(errors[-1]), sum(errors))
+
   if (refit) {
     fullmodel <- premerge[[1]]
     premerge  <- premerge[-1]
@@ -188,7 +237,11 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
     isamp <- ind.sample[-(1L:(minN+refit))]
-    tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores)
+#    tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores, mc.preschedule = FALSE)
+    tmp <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
+                         mc.preschedule = FALSE)
+    # Adjust rep.num for failed jobs
+    rep.num <- rep.num - sum(attr(tmp, 'errors'))
     premerge <- c(lb.premerge, tmp)
   }
 
