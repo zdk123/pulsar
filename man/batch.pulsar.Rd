@@ -4,11 +4,25 @@
 \alias{batch.pulsar}
 \title{pulsar: batch mode}
 \usage{
-batch.pulsar(data, fun = huge::huge, fargs = list(),
-  criterion = c("stars"), thresh = 0.1, subsample.ratio = NULL,
-  lb.stars = FALSE, ub.stars = FALSE, rep.num = 20, seed = NULL,
-  wkdir = getwd(), regdir = NA, init = "init", conffile = "",
-  job.res = list(), cleanup = FALSE, refit = TRUE)
+batch.pulsar(
+  data,
+  fun = huge::huge,
+  fargs = list(),
+  criterion = c("stars"),
+  thresh = 0.1,
+  subsample.ratio = NULL,
+  lb.stars = FALSE,
+  ub.stars = FALSE,
+  rep.num = 20,
+  seed = NULL,
+  wkdir = getwd(),
+  regdir = NA,
+  init = "init",
+  conffile = "",
+  job.res = list(),
+  cleanup = FALSE,
+  refit = TRUE
+)
 }
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}

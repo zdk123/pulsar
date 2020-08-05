@@ -4,8 +4,7 @@
 \alias{plot.pulsar}
 \title{Plot a \code{pulsar} S3 object}
 \usage{
-\method{plot}{pulsar}(x, scale = TRUE, invlam = FALSE,
-  loglam = FALSE, legends = TRUE, ...)
+\method{plot}{pulsar}(x, scale = TRUE, invlam = FALSE, loglam = FALSE, legends = TRUE, ...)
 }
 \arguments{
 \item{x}{a \code{pulsar} or \code{batch.pulsar} object}
