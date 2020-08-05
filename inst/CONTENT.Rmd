@@ -98,12 +98,12 @@ The output should be a list of adjacency matrices (which can be of sparse repres
 Here is an example from `QUIC`.
 
 ```{r, eval=pulsarchunks}
-library(QUIC)
-quicr <- function(data, lambda) {
-    S    <- cov(data)
-    est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
+library(BigQuic)
+quicr <- function(data, lambda, seed=NULL) {
+    est  <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
+    est <- setNames(lapply(ls(envir=est), mget, envir=attr(unclass(est), '.xData')), ls(envir=est))
     path <-  lapply(seq(length(lambda)), function(i) {
-                tmp <- est$X[,,i]; diag(tmp) <- 0
+                tmp <- est$precision_matrices[[1]][[i]]; diag(tmp) <- 0
                 as(tmp!=0, "lgCMatrix")
     })
     est$path <- path
