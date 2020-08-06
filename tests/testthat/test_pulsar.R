@@ -27,9 +27,9 @@ huge.serial.refit <- runtests(pulsar, "pulsar", dat, fun=huge::huge,
 ######################################################
 context(sprintf(cstr, 'quic', 'serial'))
 quic.serial       <- runtests(pulsar, "pulsar", dat, fun=quicr,
-                              fargs=list(), seed=rseed, refit=FALSE)
+                              fargs=list(seed=rseed), seed=rseed, refit=FALSE)
 quic.serial.refit <- runtests(pulsar, "pulsar", dat, fun=quicr,
-                              fargs=list(), seed=rseed, refit=TRUE)
+                              fargs=list(seed=rseed), seed=rseed, refit=TRUE)
 
 ######################################################
 context(sprintf(cstr, 'huge', 'batch'))
@@ -43,10 +43,10 @@ huge.batch.refit <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge,
 ######################################################
 context(sprintf(cstr, 'quic', 'batch', ''))
 quic.batch       <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr,
-                             fargs=list(), conffile=conffile, cleanup=TRUE,
+                             fargs=list(seed=rseed), conffile=conffile, cleanup=TRUE,
                              seed=rseed, wkdir=tmpdir, refit=FALSE)
 quic.batch.refit <- runtests(batch.pulsar, "batch.pulsar", dat, fun=quicr,
-                             fargs=list(), conffile=conffile, cleanup=TRUE,
+                             fargs=list(seed=rseed), conffile=conffile, cleanup=TRUE,
                              seed=rseed, wkdir=tmpdir, refit=TRUE)
 
 ######################################################

@@ -1,14 +1,24 @@
-quicr <- function(data, lambda) {
-    S    <- cor(data)
-    est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
+# quicr <- function(data, lambda) {
+#     S    <- cor(data)
+#     est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
+#     path <-  lapply(seq(length(lambda)), function(i) {
+#                 tmp <- est$X[,,i]; diag(tmp) <- 0
+#                 as(tmp!=0, "lgCMatrix")
+#     })
+#     est$path <- path
+#     est
+# }
+
+quicr <- function(data, lambda, seed=NULL) {
+    est  <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
+    est <- setNames(lapply(ls(envir=est), mget, envir=attr(unclass(est), '.xData')), ls(envir=est))
     path <-  lapply(seq(length(lambda)), function(i) {
-                tmp <- est$X[,,i]; diag(tmp) <- 0
+                tmp <- est$precision_matrices[[1]][[i]]; diag(tmp) <- 0
                 as(tmp!=0, "lgCMatrix")
     })
     est$path <- path
     est
 }
-
 
 runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     G <- dat$theta
@@ -36,9 +46,9 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     })
 
     mlam  <- getMaxCov(scale(dat$data))
-    lams  <- getLamPath(mlam, 5e-3, 35)
+    lams  <- getLamPath(mlam, 1e-3, 15)
     hargs <- c(fargs, list(lambda=lams))
-    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion="stars", rep.num=12, ...)
+    out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion="stars", rep.num=8, ...)
     outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE, criterion=c("stars", "gcd"))
 
     test_that("pulsar w/ lambda path works for fun", {

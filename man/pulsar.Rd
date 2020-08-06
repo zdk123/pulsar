@@ -4,10 +4,20 @@
 \alias{pulsar}
 \title{pulsar: serial or parallel mode}
 \usage{
-pulsar(data, fun = huge::huge, fargs = list(),
-  criterion = c("stars"), thresh = 0.1, subsample.ratio = NULL,
-  rep.num = 20, seed = NULL, lb.stars = FALSE, ub.stars = FALSE,
-  ncores = 1, refit = TRUE)
+pulsar(
+  data,
+  fun = huge::huge,
+  fargs = list(),
+  criterion = c("stars"),
+  thresh = 0.1,
+  subsample.ratio = NULL,
+  rep.num = 20,
+  seed = NULL,
+  lb.stars = FALSE,
+  ub.stars = FALSE,
+  ncores = 1,
+  refit = TRUE
+)
 }
 \arguments{
 \item{data}{A \eqn{n*p} matrix of data matrix input to solve for the \eqn{p*p} graphical model}
