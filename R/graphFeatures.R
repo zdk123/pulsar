@@ -30,10 +30,6 @@ GraphDiss2 <- function(G) {
     1 - (Gprod / sqrt(degProd))
 }
 
-## DEPRECATED WITHOUT rARPACK
-##eigs_sym.dsCMatrix <- function(A, ...) {
-##    eigs_sym(as(A, 'dgCMatrix'), ...)
-##}
 
 #' Natural Connectivity
 #'
@@ -49,13 +45,7 @@ GraphDiss2 <- function(G) {
 #' @export
 natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   if (is.null(eig)) {
-#    arploaded <- tryCatch(library(rARPACK), error=function(e) FALSE)
-#    if (!arploaded) {
-#      warning('install rARPACK for fast, sparse eigen decomp, proceeding with eigen')
       eig <- eigen(G)
-#    } else {
-#      eig <- eigs_sym(G, k=ncol(G))
-#    }
   }
   estrind <- exp(eig$values)
   nc <- log(mean(estrind))
@@ -66,66 +56,6 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
   return(nc)
 }
 
-### DEPRECATED
-##.tnorm <- function(x) {
-###   xs <- sum(x+1)
-###   (x+1)/xs
-##  if (all(x==0)) x
-##  else x/sum(x)
-##}
-
-
-#egraphletlist <- function(G, norm=TRUE) {
-#  ## assume G1, G2 are sparse Matrix objects
-#  Elist  <-  (Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
-##  n <- length(orbind)
-#  if (ncol(Elist) < 1 || nrow(Elist < 1))
-#    return(replicate(12, Matrix(0, nrow(G), nrow(G)), simplify=FALSE))
-#  gcount <- orca::ecount4(Elist)
-#  if (norm) {
-#    p <- nrow(G)
-#    normv <- c(choose(p, 2), rep(choose(p, 3), 3), rep(choose(p, 4), 8))
-#  }
-##  if (max(Elist) < nrow(G)) {
-#### if edges are missing from nodes at the end of the graph, add them back
-##      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
-##      gcount <- rbind(gcount, gextra)
-##  }
-#  ## expand to all possible edges
-#  ind    <- (Elist[,2]-1)*nrow(G) + Elist[,1]
-#  revind <- (Elist[,1]-1)*ncol(G) + Elist[,2]
-#  grlist <- vector('list', ncol(gcount))
-#  return(lapply(1:12, function(i) {
-#    gvec <- gcount[,i]
-#    if (norm) gvec <- gvec/normv[i]
-#    gmat <- Matrix(0, nrow=nrow(G), ncol=ncol(G))
-#    gmat[ind]    <- gvec
-#    gmat[revind] <- gvec
-#    gmat
-#  }))
-###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-###  gcor[upper.tri(gcor)]
-#}
-
-
-#vgraphletlist <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
-#  ## assume G1, G2 are sparse Matrix objects
-#  Elist  <-  orca:::convert.graph(Matrix::summary(as(G, 'symmetricMatrix'))[,-3])
-##  n <- length(orbind)
-#  if (ncol(Elist) < 1) return(matrix(0, nrow(G), 15))
-##  library(orca)
-#  gcount <- .C("count4", Elist, dim(Elist),
-#      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits #orca::count4(Elist) #
-#  if (max(Elist) < nrow(G)) {
-### if edges are missing from nodes at the end of the graph, add them back
-#      gextra <- matrix(0, nrow=nrow(G)-max(Elist), ncol=15)
-#      gcount <- rbind(gcount, gextra)
-#  }
-#  return(gcount)
-#  ## expand to all possible edges
-###  gcor <- cor(rbind(gcount[,orbind],1), method='spearman')
-###  gcor[upper.tri(gcor)]
-#}
 
 #' @keywords internal
 .adj2elist <- function(G) {
@@ -220,7 +150,7 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 #' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 #' @export
 estrada.class <- function(G, evthresh=1e-3) {
-  if (class(G) != "subgraph.centrality")
+  if (!inherits(G, "subgraph.centrality"))
       G <- subgraph.centrality(G)
 
   ev1  <- G$evec[,1]
