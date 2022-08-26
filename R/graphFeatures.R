@@ -150,7 +150,7 @@ subgraph.centrality <- function(Graph, eigs=NULL, rmdiag=FALSE) {
 #' @references Estrada, E. (2007). Topological structural classes of complex networks. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 75(1), 1-12. doi:10.1103/PhysRevE.75.016103
 #' @export
 estrada.class <- function(G, evthresh=1e-3) {
-  if (class(G) != "subgraph.centrality")
+  if (!inherits(G, "subgraph.centrality"))
       G <- subgraph.centrality(G)
 
   ev1  <- G$evec[,1]
