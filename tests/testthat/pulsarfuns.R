@@ -1,20 +1,9 @@
-# quicr <- function(data, lambda) {
-#     S    <- cor(data)
-#     est  <- QUIC::QUIC(S, rho=1, path=lambda, msg=0, tol=1e-2)
-#     path <-  lapply(seq(length(lambda)), function(i) {
-#                 tmp <- est$X[,,i]; diag(tmp) <- 0
-#                 as(tmp!=0, "lgCMatrix")
-#     })
-#     est$path <- path
-#     est
-# }
-
 quicr <- function(data, lambda, seed=NULL) {
     est  <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
     est <- setNames(lapply(ls(envir=est), mget, envir=attr(unclass(est), '.xData')), ls(envir=est))
     path <-  lapply(seq(length(lambda)), function(i) {
                 tmp <- est$precision_matrices[[1]][[i]]; diag(tmp) <- 0
-                as(tmp!=0, "lgCMatrix")
+                as(tmp!=0, "lMatrix")
     })
     est$path <- path
     est

@@ -54,7 +54,7 @@ NULL
 #'   path <- lapply(lambda, function(lam) {
 #'     tmp <- abs(S) > lam
 #'     diag(tmp) <- FALSE
-#'     as(tmp, 'lsCMatrix')
+#'     as(tmp, 'lMatrix')
 #'   })
 #'   list(path=path)
 #' }
@@ -74,7 +74,7 @@ NULL
 #'     est$path <-  lapply(seq(length(lambda)), function(i) {
 #'                    ## convert precision array to adj list
 #'                    tmp <- est$X[,,i]; diag(tmp) <- 0
-#'                  as(tmp!=0, "lgCMatrix")
+#'                  as(tmp!=0, "lMatrix")
 #'     })
 #'     est
 #' }
@@ -84,7 +84,7 @@ NULL
 #'      est <- clime(data, lambda, ...)
 #'      est$path <- lapply(est$Omegalist, function(x) {
 #'                      diag(x) <- 0
-#'                      as(abs(x) > tol, "dsCMatrix")
+#'                      as(abs(x) > tol, "lMatrix")
 #'                  })
 #'      est
 #' }
@@ -95,7 +95,7 @@ NULL
 #'      path <- lapply(lambda, function(lam) {
 #'                      tmp <- invcov.shrink(data, lam, verbose=FALSE)
 #'                      diag(tmp) <- 0
-#'                      as(abs(tmp) > tol, "lsCMatrix")
+#'                      as(abs(tmp) > tol, "lMatrix")
 #'                  })
 #'      list(path=path)
 #' }
@@ -106,7 +106,7 @@ NULL
 #'          n <- length(lambda)
 #'          tmp <- glmnet(data[,-respind], data[,respind],
 #'                                    family=family, lambda=lambda, ...)
-#'          path <-lapply(1:n, function(i) as(tmp$beta[,i,drop=FALSE], "lgCMatrix"))
+#'          path <-lapply(1:n, function(i) as(tmp$beta[,i,drop=FALSE], "lMatrix"))
 #'          list(path=path)
 #' }
 #'
