@@ -11,11 +11,11 @@ bibentry(header="To cite pulsar in publications use:",
   arxivId = "1605.07072",
   eprint = "1605.07072",
   month = "May",
-  url = "http://arxiv.org/abs/1605.07072",
+  url = "https://arxiv.org/abs/1605.07072",
   year = "2016",
 
   textVersion  =
   paste("M\u00FCller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).",
         "Generalized Stability Approach for Regularized Graphical Models.",
-        "arXiv. Retrieved from http://arxiv.org/abs/1605.07072.")
+        "arXiv. Retrieved from https://arxiv.org/abs/1605.07072.")
 )

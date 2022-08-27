@@ -15,7 +15,7 @@
 #' @name pulsar-package
 #' @seealso \code{\link{pulsar-function}}, \code{\link{pulsar}}, \code{\link{batch.pulsar}}
 #' @docType package
-#' @references Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).Generalized Stability Approach for Regularized Graphical Models.arXiv: http://arxiv.org/abs/1605.07072.
+#' @references Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016).Generalized Stability Approach for Regularized Graphical Models.arXiv: https://arxiv.org/abs/1605.07072.
 NULL
 
 #' Graphical model functions for pulsar
@@ -118,5 +118,5 @@ NULL
 #' @name pulsar-function
 #' @aliases pulsar-function
 #' @seealso \code{\link{pulsar}}, \code{\link{batch.pulsar}}, \pkg{huge}, \pkg{Matrix}
-#' @references Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv: http://arxiv.org/abs/1605.07072.
+#' @references Müller, C. L., Bonneau, R. A., & Kurtz, Z. D. (2016). Generalized Stability Approach for Regularized Graphical Models. arXiv: https://arxiv.org/abs/1605.07072.
 NULL
