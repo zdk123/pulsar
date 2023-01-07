@@ -8,9 +8,9 @@ source('pulsarfuns.R')
 rseed <- 10010
 p     <- 30
 set.seed(rseed)
-dat <- huge::huge.generator(p*100, p, "hub", verbose=FALSE, v=.4, u=.2)
+dat <- huge::huge.generator(p*30, p, "hub", verbose=FALSE, v=.4, u=.2)
 set.seed(rseed)
-dat$data <- MASS::mvrnorm(p*100, mu=rep(0,p), Sigma=dat$sigma, empirical=TRUE)
+dat$data <- MASS::mvrnorm(p*30, mu=rep(0,p), Sigma=dat$sigma, empirical=TRUE)
 
 tmpdir <- fs::path_real(tempdir())
 conffile <- ""

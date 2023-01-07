@@ -59,11 +59,6 @@ test_that("batch.pulsar options", {
             rep.num=3, lb.stars=TRUE, wkdir=tmpdir, refit=FALSE))
   test_all(est)
 
-  # suppressWarnings(
-  #   est <- batch.pulsar(dat$data, huge::huge, fargs,
-  #           rep.num=3, lb.stars=TRUE, wkdir=tmpdir, refit=TRUE))
-  # test_all(est, 1:3)
-
   suppressWarnings(est <- batch.pulsar(dat$data, huge::huge, fargs, rep.num=3, lb.stars=TRUE, cleanup=TRUE, wkdir=tmpdir, refit=FALSE))
   test_all(est, cleanup=TRUE)
 

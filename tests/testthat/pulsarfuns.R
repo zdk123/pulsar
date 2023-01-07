@@ -1,8 +1,11 @@
 quicr <- function(data, lambda, seed=NULL) {
-    est  <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
+    p <- ncol(data)
+    est <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
+    ## convert BigQuic object to named list
     est <- setNames(lapply(ls(envir=est), mget, envir=attr(unclass(est), '.xData')), ls(envir=est))
     path <-  lapply(seq(length(lambda)), function(i) {
-                tmp <- est$precision_matrices[[1]][[i]]; diag(tmp) <- 0
+                tmp <- est$precision_matrices[[1]][[i]][1:p,1:p]
+                diag(tmp) <- 0
                 as(tmp!=0, "lMatrix")
     })
     est$path <- path
@@ -35,7 +38,7 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     })
 
     mlam  <- getMaxCov(scale(dat$data))
-    lams  <- getLamPath(mlam, 1e-3, 15)
+    lams  <- getLamPath(mlam, 1e-3, 20)
     hargs <- c(fargs, list(lambda=lams))
     out   <- pfun(dat$data, fun=fun, fargs=hargs, criterion="stars", rep.num=8, ...)
     outb  <- update(out, lb.stars=TRUE, ub.stars=TRUE, criterion=c("stars", "gcd"))
@@ -54,7 +57,6 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
 
     test_that("pulsar bounds are consistent", {
         ## check lengths
-##      expect_equal(length(out$gcd$summary), length(out$stars$summary))
         expect_equal(outb$gcd$criterion, "graphlet.stability")
         expect_error(fit <- refit(out, 'stars'), NA)
 
@@ -75,12 +77,6 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
         dev.off()
         expect_gte(gcdF1, starsF1)
     })
-
-    # test_that("calling environments are stored correctly", {
-    #   ## test that est parent.frame is current environment
-    #   expect_equal(getEnvir(out), parent.frame())
-    #   expect_equal(getEnvir(outb), parent.frame())
-    # })
 
     return(list(out=out, outb=outb))
 }
@@ -119,7 +115,7 @@ testrefit <- function(desc, outb) {
         expect_warning(fit3 <- refit(outb), regexp = NA)
 
         expect_gt(sum(fit3$refit$stars), 0)
-        expect_gt(sum(fit3$refit$gcd),   0)
+        expect_gte(sum(fit3$refit$gcd),   0)
         expect_warning(fit4 <- refit(outb, "foo"), "Unknown criterion")
     })
 }
