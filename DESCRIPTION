@@ -1,6 +1,6 @@
 Package: pulsar
 Title: Parallel Utilities for Lambda Selection along a Regularization Path
-Version: 0.3.9
+Version: 0.3.10
 Encoding: UTF-8
 Authors@R: c(person("Zachary", "Kurtz", role = c("aut", "cre"), email="zdkurtz@gmail.com"),
              person("Christian", "M\u00FCller", role = c("aut", "ctb"), email="cmueller@simonsfoundation.org"))
@@ -17,7 +17,7 @@ Suggests:
     orca,
     huge,
     MASS,
-    BigQuic,
+    clime,
     glmnet,
     network,
     cluster,
