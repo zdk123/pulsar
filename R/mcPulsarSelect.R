@@ -317,7 +317,11 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
 
 #' @keywords internal
 .starsind <- function(summary, thresh, offset=1) {
+  if(any(summary >=thresh)){
     max(which.max(summary >= thresh)[1] - offset, 1)
+  }else{
+    length(summary)
+  }
 }
 
 #' @keywords internal
