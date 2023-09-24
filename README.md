@@ -5,7 +5,6 @@ bibliography: inst/gstars.bib
 # pulsar: Parallelized Utilities for Lambda Selection Along a Regularization path
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-[![Build Status](https://travis-ci.org/zdk123/pulsar.svg?branch=master)](https://travis-ci.org/zdk123/pulsar)
 
 
 

@@ -41,7 +41,7 @@ huge.batch.refit <- runtests(batch.pulsar, "batch.pulsar", dat, fun=huge::huge,
                        seed=rseed, wkdir=tmpdir, refit=TRUE)
 
 ######################################################
-context(sprintf(cstr, 'clime', 'batch', ''))
+context(sprintf(cstr, 'clime', 'batch'))
 clime.batch       <- runtests(batch.pulsar, "batch.pulsar", dat, fun=climer,
                              fargs=list(seed=rseed), conffile=conffile, cleanup=TRUE,
                              seed=rseed, wkdir=tmpdir, refit=FALSE)
