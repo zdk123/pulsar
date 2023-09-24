@@ -1,5 +1,6 @@
 ^README\.Rmd$
 ^README\.log$
+^LICENSE\.md$
 ^figure$
 ^\.travis\.yml$
 ^.*cran-comments.md$
