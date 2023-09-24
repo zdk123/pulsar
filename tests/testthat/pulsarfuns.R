@@ -1,17 +1,3 @@
-# quicr <- function(data, lambda, seed=NULL) {
-#     p <- ncol(data)
-#     est <- BigQuic::BigQuic(data, lambda=lambda, epsilon=1e-2, use_ram=TRUE, seed=seed)
-#     ## convert BigQuic object to named list
-#     est <- setNames(lapply(ls(envir=est), mget, envir=attr(unclass(est), '.xData')), ls(envir=est))
-#     path <-  lapply(seq(length(lambda)), function(i) {
-#                 tmp <- est$precision_matrices[[1]][[i]][1:p,1:p]
-#                 diag(tmp) <- 0
-#                 as(tmp!=0, "lMatrix")
-#     })
-#     est$path <- path
-#     est
-# }
-
 climer <- function(data, lambda, seed=NULL) {
     est <- clime::clime(data, lambda=lambda, pdtol=1e-2)
     est$path <- lapply(est$Omegalist, function(x) {
