@@ -61,7 +61,8 @@ natural.connectivity <- function(G, eig=NULL, norm=TRUE) {
 .adj2elist <- function(G) {
     if (inherits(G, "sparseMatrix")) {
         G <- Matrix::triu(G, k=1)
-        return(Matrix::summary(G)[,-3])
+        index_i_j <- Matrix::mat2triplet(G)[1:2]
+        return(as.data.frame(index_i_j))
     } else {
         p <- ncol(G)
         return(arrayInd(which(as.logical(triu(G))), c(p,p)))
@@ -94,10 +95,7 @@ gcvec <- function(G, orbind=c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)+1) {
   ## expand missing nodes
   buffer <- matrix(0, nrow=p-nrow(gcount), ncol=ncol(gcount))
   gcount <- rbind(gcount, buffer)
-# deprecate direct call to count4 for CRAN submission
-#  gcount <- .C("count4", Elist, dim(Elist),
-#      orbits = matrix(0, nrow = max(Elist), ncol = 15), PACKAGE="orca")$orbits
-  ##  # warnings here are due to std dev == 0. This almost always occurs for a completely connected
+  ## warnings here are due to std dev == 0. This almost always occurs for a completely connected
   ## or completely empty graph and can be safely suppressed.
   gcor <- suppressWarnings(cor(rbind(gcount[,orbind],1), method='spearman'))
   gcor[upper.tri(gcor)]
