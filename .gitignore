@@ -4,3 +4,4 @@ CRAN-SUBMISSION
 cran-comments.md
 *.Rcheck/
 *.DS_Store
+*.tar.gz
