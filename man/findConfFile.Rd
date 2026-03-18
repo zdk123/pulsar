@@ -20,19 +20,21 @@ defining worker node resources and executing the batch R code, will need to
 be defined somewhere on the system. See \code{\link{findTemplateFile}}.
 }
 \examples{
-## Default config file provided by pulsar runs code in interactive mode
-## This is for testing purposes and executes serially.
-findConfFile()
-## Use the parallel package
-## slower than providing the 'ncores' argument to pulsar function, due to
-## the overhead of creating the batchtools registry.
-findConfFile('parallel')
+if (requireNamespace("batchtools", quietly = TRUE)) {
+  ## Default config file provided by pulsar runs code in interactive mode
+  ## This is for testing purposes and executes serially.
+  findConfFile()
+  ## Use the parallel package
+  ## slower than providing the 'ncores' argument to pulsar function, due to
+  ## the overhead of creating the batchtools registry.
+  findConfFile('parallel')
 
-## Use the snow package to register/execute batch jobs on socket clusters.
-findConfFile('snow')
-## Use a TORQUE / PBS queing system. Requires brew template file.
-findConfFile('torque')
-findTemplateFile('simpletorque')
+  ## Use the snow package to register/execute batch jobs on socket clusters.
+  findConfFile('snow')
+  ## Use a TORQUE / PBS queing system. Requires brew template file.
+  findConfFile('torque')
+  findTemplateFile('simpletorque')
+}
 
 }
 \seealso{

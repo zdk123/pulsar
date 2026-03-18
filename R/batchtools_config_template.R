@@ -4,19 +4,21 @@
 #'
 #' @param name name of default config or path to config file.
 #' @examples
-#' ## Default config file provided by pulsar runs code in interactive mode
-#' ## This is for testing purposes and executes serially.
-#' findConfFile()
-#' ## Use the parallel package
-#' ## slower than providing the 'ncores' argument to pulsar function, due to
-#' ## the overhead of creating the batchtools registry.
-#' findConfFile('parallel')
+#' if (requireNamespace("batchtools", quietly = TRUE)) {
+#'   ## Default config file provided by pulsar runs code in interactive mode
+#'   ## This is for testing purposes and executes serially.
+#'   findConfFile()
+#'   ## Use the parallel package
+#'   ## slower than providing the 'ncores' argument to pulsar function, due to
+#'   ## the overhead of creating the batchtools registry.
+#'   findConfFile('parallel')
 #'
-#' ## Use the snow package to register/execute batch jobs on socket clusters.
-#' findConfFile('snow')
-#' ## Use a TORQUE / PBS queing system. Requires brew template file.
-#' findConfFile('torque')
-#' findTemplateFile('simpletorque')
+#'   ## Use the snow package to register/execute batch jobs on socket clusters.
+#'   findConfFile('snow')
+#'   ## Use a TORQUE / PBS queing system. Requires brew template file.
+#'   findConfFile('torque')
+#'   findTemplateFile('simpletorque')
+#' }
 #'
 #' @details
 #' See the batchtools functions \code{batchtools::findConfFile} and \code{batchtools::makeRegistry}. When calling \code{batch.pulsar}, we attempt to use batchtool's default lookup for a config file before calling \code{pulsar::findConfFile}.
