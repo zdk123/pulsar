@@ -1,3 +1,10 @@
+pulsar 0.3.12 (3-2026 Release)
+==============
+* Guard examples and vignettes against missing suggested packages (fixes CRAN noSuggests check failures)
+* Pin huge (>= 1.5) in Suggests
+* Use arXiv DOI format in Description field
+
+
 pulsar 0.3.11 (9-2023 Release)
 ==============
 * Fixes an issue where all the variability values are lower than the variability threshold, select the lowest possible value in Bounded Stars. Fix by @gnopuz83

@@ -29,25 +29,26 @@ The output from the function must be a list or another S3 object inherited from 
 The function may return other named outputs, but these will be ignored.
 }
 \examples{
-## Generate a hub example
- dat <- huge::huge.generator(100, 40, 'hub', verbose=FALSE)
+if (requireNamespace("huge", quietly = TRUE)) {
+  ## Generate a hub example
+  dat <- huge::huge.generator(100, 40, 'hub', verbose=FALSE)
 
-## Simple correlation thresholding
-corrthresh <- function(data, lambda) {
-  S <- cor(data)
-  path <- lapply(lambda, function(lam) {
-    tmp <- abs(S) > lam
-    diag(tmp) <- FALSE
-    as(tmp, 'lMatrix')
-  })
-  list(path=path)
+  ## Simple correlation thresholding
+  corrthresh <- function(data, lambda) {
+    S <- cor(data)
+    path <- lapply(lambda, function(lam) {
+      tmp <- abs(S) > lam
+      diag(tmp) <- FALSE
+      as(tmp, 'lMatrix')
+    })
+    list(path=path)
+  }
+
+  ## Inspect output
+  lam <- getLamPath(getMaxCov(dat$sigmahat), 1e-4, 10)
+  out.cor  <- pulsar(dat$data, corrthresh, fargs=list(lambda=lam))
+  out.cor
 }
-
-## Inspect output
-lam <- getLamPath(getMaxCov(dat$sigmahat), 1e-4, 10)
-out.cor  <- pulsar(dat$data, corrthresh, fargs=list(lambda=lam))
-out.cor
-
 \dontrun{
 ## Additional examples
 ## quic
