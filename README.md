@@ -172,7 +172,7 @@ plot(gcdnet, coord=coords, usearrows=FALSE, main="gcd+StARS")
 
 For large graphs, we could reduce `pulsar` run time by running each subsampled dataset in parallel (i.e., each run as an independent job). This is a natural choice since we want to infer an independent graphical model for each subsampled dataset.
 
-Enter [batchtools](https://mllg.github.io/batchtools/articles/batchtools.html). This package lets us invoke the queuing system in a high performance computing (hpc) environment so that we don't have to worry about any of the job-handling procedures in R.
+Enter [batchtools](https://batchtools.mlr-org.com/). This package lets us invoke the queuing system in a high performance computing (hpc) environment so that we don't have to worry about any of the job-handling procedures in R.
 
 `pulsar` has only been tested for Torque so far, but should work without too much effort for LSF, SLURM, SGE, ...
 
@@ -180,7 +180,7 @@ We also potentially gain efficiency in memory usage. Even for memory efficient r
 
 This also means we will need access to a writable directory to write intermediate files (where the batchtools registry is stored). These will be automatically generated R scripts, error and output files and sqlite files so that batchtools can keep track of everything (although a different database can be used). Please see that package's documentation for more information. By default, `pulsar` will create the registry directory under R's  (platform-dependent) tmp directory but this can be overridden(`regdir` argument to `batch.pulsar`).
 
-For generating batchtools, we need a configuration file (supply a path string to `conffile` argument, a good choice is the working directory) and, for an hpc with a queuing system, a template file. Example config (batchtools.conf.torque.R) and PBS template file (simpletorque.tmpl) for Torque can be found in the inst/config/ and inst/templates/ subdirectories of this repo, respectively. See the [batchtools help page](https://mllg.github.io/batchtools/articles/batchtools.html) for creating templates for other systems.
+For generating batchtools, we need a configuration file (supply a path string to `conffile` argument, a good choice is the working directory) and, for an hpc with a queuing system, a template file. Example config (batchtools.conf.torque.R) and PBS template file (simpletorque.tmpl) for Torque can be found in the inst/config/ and inst/templates/ subdirectories of this repo, respectively. See the [batchtools help page](https://batchtools.mlr-org.com/) for creating templates for other systems.
 
 For this example I suggest using batchtools interactive clusters (serial) mode to get things up and running.
 The necessary config file is included in this package.
