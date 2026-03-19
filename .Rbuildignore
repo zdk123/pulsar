@@ -3,6 +3,7 @@
 ^LICENSE\.md$
 ^figure$
 ^\.travis\.yml$
+^\.github$
 ^.*cran-comments.md$
 ^.*revdep.*
 ^CRAN-RELEASE$
