@@ -38,13 +38,11 @@ test_that("Job stops when every parallel job has errors", {
           rep.num=8, refit=FALSE, lb.stars=TRUE),
     regexp = "NA")
 
-  skip_on_os("windows")
   expect_error(
     pulsar(X, fun=huge_error, hargs, ncores=2, subsample.ratio=1, seed=rseed,
           rep.num=8, refit=FALSE),
     regexp = "NA")
 
-  skip_on_os("windows")
   expect_error(
     pulsar(X, fun=huge_error, hargs, ncores=2, subsample.ratio=1, seed=rseed,
           rep.num=8, refit=FALSE, lb.stars=TRUE),
@@ -65,14 +63,12 @@ test_that("Job continues when subset of parallel jobs have errors/warnings", {
           rep.num=8, refit=FALSE, lb.stars=TRUE),
     regexp = "NA")
 
-  skip_on_os("windows")
   expect_warning(
     filter_warning(
       out1 <- pulsar(X, fun=huge_error, hargs, ncores=2, subsample.ratio=.5,
             seed=rseed, rep.num=8, refit=FALSE), "Optimal lambda"),
     regexp = "NA")
 
-  skip_on_os("windows")
   expect_warning(
     filter_warning(
       out2 <- pulsar(X, fun=huge_error, hargs, ncores=2, subsample.ratio=.5,
