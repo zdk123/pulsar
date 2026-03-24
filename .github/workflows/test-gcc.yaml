@@ -27,5 +27,6 @@ jobs:
           Rscript -e 'cat(system2("ldd", c(system.file("libs", "huge.so", package="huge")), stdout=TRUE), sep="\n")'
 
       - name: Run tests
-        run: Rscript -e 'testthat::test_dir("tests/testthat")'
+        run: Rscript -e 'library(testthat); library(pulsar); test_check("pulsar")'
+        working-directory: tests
         timeout-minutes: 10
