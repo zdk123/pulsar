@@ -40,7 +40,7 @@ pulsar(
 
 \item{ub.stars}{Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.}
 
-\item{ncores}{number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.}
+\item{ncores}{number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. See \code{batch.pulsar} for more parallelization options.}
 
 \item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})}
 }
