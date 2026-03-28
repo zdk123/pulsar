@@ -1,3 +1,9 @@
+pulsar 0.3.13
+==============
+* Replace mclapply (fork-based) with parLapply (PSOCK cluster) when ncores > 1, fixing OpenMP+fork deadlocks on GCC/Linux (CRAN r-devel-linux-x86_64-fedora-gcc)
+* Multi-core mode now works on Windows
+
+
 pulsar 0.3.12 (3-2026 Release)
 ==============
 * Guard examples and vignettes against missing suggested packages (fixes CRAN noSuggests check failures)

@@ -48,17 +48,31 @@
 
 #' @keywords internal
 .try_mclapply <- function(X, FUN, mc.cores = getOption("mc.cores", 2L),
-                          pass.errors=TRUE, ...) {
-  ## capture errors/warnings from mclapply
+                          pass.errors=TRUE, mc.preschedule = TRUE, ...) {
   warn <- NULL
   env <- environment()
-  withCallingHandlers({out <- mclapply(X, FUN, mc.cores=mc.cores, ...)},
-                      warning=function(w) {
-                         # why doesn't assignment mode work when ncores>1
-                         assign('warn', c(warn, w$message), env)
-                         invokeRestart("muffleWarning")
-                       })
-  ## handle errors
+
+  if (mc.cores > 1L) {
+    cl <- parallel::makePSOCKcluster(mc.cores)
+    on.exit(parallel::stopCluster(cl))
+    safe_fun <- function(x, ...) {
+      tryCatch(FUN(x, ...), error = function(e) {
+        structure(conditionMessage(e), class = "try-error")
+      })
+    }
+    if (mc.preschedule) {
+      out <- parallel::parLapply(cl, X, safe_fun, ...)
+    } else {
+      out <- parallel::parLapplyLB(cl, X, safe_fun, ...)
+    }
+  } else {
+    withCallingHandlers({out <- mclapply(X, FUN, mc.cores=1L, ...)},
+                        warning=function(w) {
+                           assign('warn', c(warn, w$message), env)
+                           invokeRestart("muffleWarning")
+                         })
+  }
+
   errors <- sapply(out, inherits, what="try-error")
   if (any(errors)) {
     error <- table(trimws(sapply(out[errors], '[', 1)))
@@ -68,11 +82,9 @@
       stop(msg, call.=FALSE)
     } else {
       warning(msg, call.=FALSE)
-      ## continue with successful jobs
       out <- out[!errors]
     }
   } else {
-    ## will only invoke if ncore=1, otherwise mclapply suppresses warnings
     if (length(warn) > 0) {
       twarn <- table(trimws(sapply(warn, '[', 1)))
       msg   <- paste(sprintf('%s job%s had warning: "%s"',
@@ -80,10 +92,8 @@
                       collapse="\n")
       warning(msg, call.=FALSE)
     }
-  }## no errors detected, continue
+  }
 
-  # reset previous warn option
-  # options(warn=warn.opt)
   attr(out, 'errors') <- errors
   return(out)
 }
@@ -103,7 +113,7 @@
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
-#' @param ncores number of cores to use for subsampling. See \code{batch.pulsar} for more parallelization options.
+#' @param ncores number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. See \code{batch.pulsar} for more parallelization options.
 #' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
