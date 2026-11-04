@@ -1,3 +1,10 @@
+pulsar 0.3.14
+==============
+* Fix tests for huge >= 2.0, which errors on an increasing lambda path. These test failures got the package archived on CRAN
+* batch.pulsar now stops with the estimator's error message when every job fails, or when the full-data fit fails with refit = TRUE
+* In parallel mode with refit = TRUE, pulsar now stops if the full-data fit fails. Previously it used a subsample's result as the full fit
+
+
 pulsar 0.3.13
 ==============
 * Replace mclapply (fork-based) with parLapply (PSOCK cluster) when ncores > 1, fixing OpenMP+fork deadlocks on GCC/Linux (CRAN r-devel-linux-x86_64-fedora-gcc)
