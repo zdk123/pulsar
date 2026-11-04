@@ -21,8 +21,10 @@ runtests <- function(pfun, pclass, dat, fun, fargs, ...) {
     test_that("weird lambda path results in correct error or warning", {
         lams <- seq(.5, .7, length.out=5)
         hargs <- c(fargs, list(lambda=lams))
-        expect_warning(out <- pfun(dat$data, fun=fun, fargs=hargs, rep.num=3,
-                       ...), "lambda path")
+        ## argument check only: pulsar must warn, and the estimator may then
+        ## reject the increasing path itself (huge >= 2.0 does)
+        expect_warning(tryCatch(pfun(dat$data, fun=fun, fargs=hargs, rep.num=3,
+                       ...), error=function(e) NULL), "lambda path")
         expect_warning(out <- pfun(dat$data, fun=fun,
               fargs=c(list(lambda=lams[1]), fargs), rep.num=3, ...), "1 value")
         expect_error(out <- pfun(dat$data, fun=fun, fargs=c(list(lams=lams),
