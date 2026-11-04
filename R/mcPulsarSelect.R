@@ -217,6 +217,9 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   # Adjust rep.num for failed jobs
   rep.num <- rep.num - ifelse(refit, sum(errors[-1]), sum(errors))
 
+  if (refit && errors[1])
+    stop('Fitting the full data failed', call.=FALSE)
+
   if (refit) {
     fullmodel <- premerge[[1]]
     premerge  <- premerge[-1]
