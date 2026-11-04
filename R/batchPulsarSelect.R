@@ -125,6 +125,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     doneRun <- batchtools::waitForJobs(reg=reg, id)
     jdone   <- batchtools::findDone(reg=reg, id)
     pulsar.jobs <- intersect((1+refit):minN, jdone$job.id)
+    .batchcheck(reg, jdone, pulsar.jobs, refit)
 
     if (refit) {
       fullmodel <- batchtools::loadResult(id=1, reg=reg)
@@ -185,6 +186,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       doneRun <- batchtools::waitForJobs(reg=reg, id)
       jdone   <- batchtools::findDone(reg=reg, id)
       pulsar.jobs <- intersect((1+refit):rep.num, jdone$job.id)
+      .batchcheck(reg, jdone, pulsar.jobs, FALSE)
     }
     rep.num <- length(pulsar.jobs) # adjust denominator to successfull jobs
     if (lb.stars) rep.num <- rep.num + minN
@@ -267,6 +269,18 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
   if (length(defconffile)==0 || is.null(defconffile))
     defconffile <- findConfFile(conffile)
   defconffile
+}
+
+#' @keywords internal
+.batchcheck <- function(reg, jdone, pulsar.jobs, refit) {
+  ## stop with the estimator's own error when nothing usable finished
+  if (refit && !(1L %in% jdone$job.id))
+    what <- 'Fitting the full data'
+  else if (length(pulsar.jobs) == 0)
+    what <- 'All subsample jobs'
+  else return(invisible())
+  msg <- unique(batchtools::getErrorMessages(reg=reg)$message)
+  stop(paste0(what, ' failed with: ', paste(msg, collapse='; ')), call.=FALSE)
 }
 
 #' @keywords internal
