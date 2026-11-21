@@ -21,7 +21,9 @@ batch.pulsar(
   conffile = "",
   job.res = list(),
   cleanup = FALSE,
-  refit = TRUE
+  refit = TRUE,
+  fail.action = c("drop", "unselectable"),
+  fail.thresh = 0
 )
 }
 \arguments{
@@ -58,6 +60,10 @@ batch.pulsar(
 \item{cleanup}{Flag for removing batchtools registry files. Recommended FALSE unless you're sure intermediate data shouldn't be saved.}
 
 \item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})}
+
+\item{fail.action}{how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.}
+
+\item{fail.thresh}{threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.}
 }
 \value{
 an S3 object of class \code{\link{batch.pulsar}} with a named member for each stability criterion/metric. Within each of these are:
@@ -71,6 +77,8 @@ If \code{stars} is included as a criterion then additional arguments include
 \itemize{
    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
+   \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed (see \code{\link{pulsar-function}})
+   \item n.fit: the number of successful subsample fits at each lambda
 }
 
 reg: Registry object. See \code{batchtools::makeRegistry}
