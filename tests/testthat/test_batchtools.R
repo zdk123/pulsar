@@ -81,3 +81,21 @@ test_that("batch.pulsar submits each subsample once (#35)", {
     }
   }
 })
+
+test_that("batch.pulsar partial-failure warning gives a count and the error (#38)", {
+  set.seed(1); X <- matrix(rnorm(200*6), 200)
+  h <- list(lambda=getLamPath(.9, .05, 8), verbose=FALSE)
+  bad <- function(data, lambda, ...) {
+    if (data[1,1] > 0.5) stop("boom")
+    huge::huge(data, lambda=lambda, ...)
+  }
+  w <- NULL
+  withCallingHandlers(
+    est <- batch.pulsar(X, bad, h, rep.num=6, seed=3, refit=FALSE, wkdir=tmpdir),
+    warning=function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
+  w <- grep("jobs completed", w, value=TRUE)
+  expect_length(w, 1)
+  nok <- unique(est$stars$n.fit)
+  expect_match(w, sprintf("^%d of 6 jobs completed\\.", nok))
+  expect_match(w, sprintf('%d jobs? failed with: ".*boom"', 6 - nok))
+})
