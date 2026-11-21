@@ -25,7 +25,8 @@ jobs:
         run: |
           Rscript -e '
             pkgs <- c("testthat", "Matrix", "batchtools", "fs", "checkmate", "MASS",
-                      "clime", "orca", "glmnet", "network", "cluster", "knitr", "rmarkdown")
+                      "clime", "orca", "glmnet", "network", "cluster", "knitr", "rmarkdown",
+                      "future", "processx")
             # binary huge first so its dependencies are binaries too, then rebuild it
             install.packages(c(pkgs, "huge"), repos = Sys.getenv("RSPM"))
             # warn = 2: a failed source build is an error, not a silent fall back to the binary

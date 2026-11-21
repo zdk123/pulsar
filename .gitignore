@@ -5,3 +5,4 @@ cran-comments.md
 *.Rcheck/
 *.DS_Store
 *.tar.gz
+__pycache__/
