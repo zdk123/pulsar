@@ -88,41 +88,19 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     nlams    <- length(fargs$lambda)
     conffile <- findConfFile(conffile)
 
-    if (!is.null(seed)) set.seed(seed)
-    ind.sample <- replicate(rep.num, sample(c(1:n),
-                    floor(n*subsample.ratio), replace=FALSE), simplify=FALSE)
-    if (refit) {
-      tmp <- 1L:n
-      attr(tmp, 'full') <- TRUE
-      ind.sample <- c(list(tmp), ind.sample)
-    }
-    if (!is.null(seed)) set.seed(NULL)
-
-    ## build the estimator function that takes the randomized sample index
-    ## and the full data
-    estFun <- function(ind.sample, fargs, data, fun) {
-      tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
-      if (!('path' %in% names(tmp)))
-        stop('Error: expected data stucture with \'path\' member')
-
-      if (isTRUE(attr(ind.sample, 'full')))
-        return(tmp)
-      else
-        return(.fitpath(tmp))
-    }
+    if (lb.stars && !("stars" %in% criterion))
+      stop('Lower/Upper bound method must be used with StARS')
+    jobs <- .planjobs(n, rep.num, subsample.ratio, refit, lb.stars, seed)
+    ## batch job: run one job spec on the data
+    estFun <- function(spec, fargs, data, fun) .run_job(spec, data, fun, fargs)
 
 
     est <- list()
     reduceargs <- list(init=.starsinit(nlams)) ; reduceGCDargs <- list()
-    if (lb.stars) {
-      if (!("stars" %in% criterion)) # || length(criterion)>1)
-        stop('Lower/Upper bound method must be used with StARS')
-      minN   <- 2 + refit
-      if (!is.na(regdir)) regdir <- paste(regdir, init, sep="_")
-    } else
-        minN <- rep.num + refit
+    if (lb.stars && !is.na(regdir)) regdir <- paste(regdir, init, sep="_")
 
-    isamp <- ind.sample[1:minN]
+    isamp <- .stagejobs(jobs, 1L)
+    minN  <- length(isamp)
     out <- batchply(data, estFun, fun, fargs, isamp,
                     wkdir, regdir, conffile, job.res)
     reg <- out$reg ; id  <- out$id
@@ -189,8 +167,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       }
       regdir <- gsub(paste("_", init, sep=""), "", regdir)
       ## Run graph estimation on the rest of the subsamples
-      ## skip every first-stage job: the full fit (if refit) and minN subsamples
-      isamp <- ind.sample[-(1:(minN+refit))]
+      isamp <- .stagejobs(jobs, 2L)
       out   <- batchply(data, estFun, fun, fargs, isamp,
                         wkdir, regdir, conffile, job.res)
       reg <- out$reg ; id <- out$id
@@ -319,12 +296,12 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
 }
 
 #' @keywords internal
-batchply <- function(data, estFun, fun, fargs, ind.sample, wkdir, regdir,
+batchply <- function(data, estFun, fun, fargs, jobs, wkdir, regdir,
                      conffile, job.res) {
   reg <- batchtools::makeRegistry(file.dir=regdir, work.dir=wkdir,
                                   conf.file=findConfFile(conffile))
   args <- list(fargs=fargs, data=data, fun=fun)
-  id   <- batchtools::batchMap(estFun, ind.sample, more.args=args, reg=reg)
+  id   <- batchtools::batchMap(estFun, jobs, more.args=args, reg=reg)
   doneSub <- batchtools::submitJobs(reg=reg, resources=job.res)
   return(list(reg=reg, id=id))
 }
