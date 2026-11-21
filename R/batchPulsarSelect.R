@@ -20,6 +20,8 @@
 #' \itemize{
 #'    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
 #'    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
+#'    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed (see \code{\link{pulsar-function}})
+#'    \item n.fit: the number of successful subsample fits at each lambda
 #'}
 #' @return reg: Registry object. See \code{batchtools::makeRegistry}
 #' @return id: Identifier for mapping graph estimation function. See \code{batchtools::batchMap}
@@ -64,7 +66,8 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
                     criterion=c("stars"), thresh = 0.1, subsample.ratio = NULL,
                     lb.stars=FALSE, ub.stars=FALSE, rep.num = 20, seed=NULL,
                     wkdir=getwd(), regdir=NA, init="init", conffile='',
-                    job.res=list(), cleanup=FALSE, refit=TRUE) {
+                    job.res=list(), cleanup=FALSE, refit=TRUE,
+                    fail.action=c("drop", "unselectable"), fail.thresh=0) {
 
     if (!requireNamespace('batchtools', quietly=TRUE)) {
       stop("'batchtools' package required to run 'batch.pulsar'")
@@ -80,6 +83,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     .lamcheck(fargs$lambda)
     .critcheck0(criterion, knowncrits)
     subsample.ratio <- .ratcheck(subsample.ratio, n)
+    fail.action <- .failcheck(fail.action, fail.thresh)
     nlams    <- length(fargs$lambda)
     conffile <- findConfFile(conffile)
 
@@ -103,12 +107,12 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       if (isTRUE(attr(ind.sample, 'full')))
         return(tmp)
       else
-        return(tmp$path)
+        return(.fitpath(tmp))
     }
 
 
     est <- list()
-    reduceargs <- list() ; reduceGCDargs <- list()
+    reduceargs <- list(init=.starsinit(nlams)) ; reduceGCDargs <- list()
     if (lb.stars) {
       if (!("stars" %in% criterion)) # || length(criterion)>1)
         stop('Lower/Upper bound method must be used with StARS')
@@ -133,9 +137,11 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     } else {
       fullmodel <- NULL
     }
-    ## Use this for stars crits
-    starsaggfun <- function(res, aggr)
-      lapply(1:length(aggr), function(i) aggr[[i]] + res[[i]])
+    ## Use this for stars crits: sum selections over successful fits,
+    ## count failed (NULL) fits at each lambda
+    starsaggfun <- .starsagg
+    ## graphlet correlation vectors, NULL for failed fits
+    gcdaggfun <- function(res) lapply(res, function(g) if (is.null(g)) NULL else gcvec(g))
 
     if (lb.stars) {
       est$init.reg <- reg ; est$init.id  <- id
@@ -144,14 +150,15 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
         stop('Errors in batch jobs for computing initial stability')
 
       # collect initial results
-      lb.starsmerge <- batchtools::reduceResults(reg=reg, ids=pulsar.jobs, fun=starsaggfun)
-      lb.est <- stars.stability(NULL, thresh, minN, p, lb.starsmerge)
+      lb.starsmerge <- batchtools::reduceResults(reg=reg, ids=pulsar.jobs, fun=starsaggfun,
+                                                 init=.starsinit(nlams))
+      lb.est <- stars.stability(NULL, thresh, minN, p, lb.starsmerge$merge,
+                                n.failed=lb.starsmerge$n.failed)
       gc(FALSE)
       # compute initial gcd if selected
       if ('gcd' %in% criterion) {
-        aggfun <- function(job, res) lapply(res, gcvec)
         lb.gcdpremerge <- do.call(batchtools::reduceResultsList,
-                           c(list(reg=reg, ids=pulsar.jobs, fun=aggfun), reduceGCDargs))
+                           c(list(reg=reg, ids=pulsar.jobs, fun=gcdaggfun), reduceGCDargs))
       }
       if (cleanup) unlink(reg$file.dir, recursive=TRUE)
       if (lb.est$opt.index == 1)
@@ -170,7 +177,9 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       ## select middle of the lambda path
       fargs$lambda <- fargs$lambda[ub.index:lb.est$opt.index]
       nlams        <- length(fargs$lambda)
-      reduceargs   <- list(init=lb.starsmerge[ub.index:lb.est$opt.index])
+      pind         <- ub.index:lb.est$opt.index
+      reduceargs   <- list(init=list(merge=lb.starsmerge$merge[pind],
+                                     n.failed=lb.starsmerge$n.failed[pind]))
 
       ## process initial estimate if gcd is selected
       if ('gcd' %in% criterion) {
@@ -199,15 +208,17 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
         ## Reduce results, include init estimate from N=2 if lb/ub is used ##
         starsmerge <- do.call(batchtools::reduceResults,
                          c(list(reg=reg, ids=pulsar.jobs, fun=starsaggfun), reduceargs))
-        est$stars  <- stars.stability(NULL, thresh, rep.num, p, starsmerge)
+        est$stars  <- stars.stability(NULL, thresh, rep.num, p, starsmerge$merge,
+                                      n.failed=starsmerge$n.failed,
+                                      fail.action=fail.action, fail.thresh=fail.thresh)
       }
 
       if (crit == "gcd") {
-        gcdaggfun   <- function(res) lapply(res, gcvec)
         gcdpremerge <- c(reduceGCDargs$init,
                         batchtools::reduceResultsList(reg=reg, ids=pulsar.jobs, fun=gcdaggfun))
-        gcdmerge    <- lapply(1:nlams, function(i) dist(t(sapply(1:rep.num, function(j) gcdpremerge[[j]][[i]]))))
-        est$gcd <- gcd.stability(NULL, thresh, rep.num, p, nlams, gcdmerge)
+        gcdmerge    <- .gcdmerge(.tlist(gcdpremerge, nlams, rep.num))
+        est$gcd <- gcd.stability(NULL, thresh, rep.num, p, nlams, gcdmerge$merge,
+                                 n.failed=gcdmerge$n.failed)
       }
 
       else if (crit == "estrada") {
@@ -238,6 +249,12 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       tmpmerg[pinv]   <- lb.est$merge[pinv]
       tmpmerg[pind]   <- est$stars$merge
       est$stars$merge <- tmpmerg
+      ## stitch back together failure counts
+      tmpfail <- lb.est$n.failed ; tmpfit <- lb.est$n.fit
+      tmpfail[pind]      <- est$stars$n.failed
+      tmpfit[pind]       <- est$stars$n.fit
+      est$stars$n.failed <- tmpfail
+      est$stars$n.fit    <- tmpfit
       ## record stars-related indices
       est$stars$lb.index  <- lb.est$opt.index
       est$stars$ub.index  <- ub.index
@@ -249,6 +266,8 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     est$reg <- reg
 
     if ("stars" %in% criterion) {
+      .failwarn(est$stars$n.failed, est$stars$n.failed + est$stars$n.fit,
+                est$stars$opt.index)
       if (est$stars$opt.index == 1) {
         direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
         warning(paste("Optimal lambda may be", direction,

@@ -16,7 +16,9 @@ pulsar(
   lb.stars = FALSE,
   ub.stars = FALSE,
   ncores = 1,
-  refit = TRUE
+  refit = TRUE,
+  fail.action = c("drop", "unselectable"),
+  fail.thresh = 0
 )
 }
 \arguments{
@@ -43,6 +45,10 @@ pulsar(
 \item{ncores}{number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. See \code{batch.pulsar} for more parallelization options.}
 
 \item{refit}{Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})}
+
+\item{fail.action}{how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.}
+
+\item{fail.thresh}{threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -56,6 +62,8 @@ If \code{stars} is included as a criterion then additional arguments include
 \itemize{
    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
+   \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
+   \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
 }
 
 call: the original function call
@@ -64,6 +72,8 @@ call: the original function call
 Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
 }
 \details{
+\strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
+
 The options for \code{criterion} statistics are:
 \itemize{
    \item stars (Stability approach to regularization selection)
