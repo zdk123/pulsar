@@ -84,6 +84,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     .critcheck0(criterion, knowncrits)
     subsample.ratio <- .ratcheck(subsample.ratio, n)
     fail.action <- .failcheck(fail.action, fail.thresh)
+    .lbcheck(lb.stars, rep.num)
     nlams    <- length(fargs$lambda)
     conffile <- findConfFile(conffile)
 
