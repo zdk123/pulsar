@@ -121,7 +121,7 @@
 #' @param seed A numeric seed to force predictable subsampling. Default is NULL. Use for testing purposes only.
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
-#' @param ncores number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. See \code{batch.pulsar} for more parallelization options.
+#' @param ncores number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. Workers receive \code{fun} and \code{fargs}, but not other objects from your session, so a \code{fun} that calls your own helper functions should define them inside \code{fun} or load them from a package. See \code{batch.pulsar} for more parallelization options.
 #' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #' @param fail.action how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.
 #' @param fail.thresh threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.
@@ -188,6 +188,9 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                    ncores = 1, refit=TRUE,
                    fail.action = c("drop", "unselectable"), fail.thresh = 0)  {
   gcinfo(FALSE)
+  ## evaluate fun now: parallel workers get the function itself, not a promise
+  ## pointing at the caller's (unserialized) global environment (#43)
+  force(fun)
   n <- nrow(data)
   p <- ncol(data)
   # min requirements for function args
