@@ -28,6 +28,8 @@ jobs:
                       "clime", "orca", "glmnet", "network", "cluster", "knitr", "rmarkdown")
             # binary huge first so its dependencies are binaries too, then rebuild it
             install.packages(c(pkgs, "huge"), repos = Sys.getenv("RSPM"))
+            # warn = 2: a failed source build is an error, not a silent fall back to the binary
+            options(warn = 2)
             install.packages("huge", type = "source", repos = "https://cloud.r-project.org")
             missing <- setdiff(c(pkgs, "huge"), rownames(installed.packages()))
             if (length(missing)) stop("Failed to install: ", paste(missing, collapse = ", "))
