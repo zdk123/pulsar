@@ -26,7 +26,16 @@ At least one argument must be named "lambda", which is expected to be a decreasi
 Outputs:
 
 The output from the function must be a list or another S3 object inherited from a list. At least one member must be named \code{path}. This \code{path} object itself must be a list of \eqn{p*p} adjacency matrices, one for each value of lambda. Each cell in the adjacency matrix contains a 1 or TRUE if there is an edge between two nodes or 0/FALSE otherwise. It is highly recommended (though not enforced by \pkg{pulsar}) that each adjacency matrix be a column-oriented, compressed, sparse matrix from the \pkg{Matrix} package. For example, \code{dgCMatrix}/\code{dsCMatrix} (general/symmetric numeric Matrix) or the 1-bit \code{lgCMatrix}/\code{lsCMatrix} classes.
-The function may return other named outputs, but these will be ignored.
+The function may return other named outputs, but these will be ignored, with one exception:
+
+Reporting failed fits:
+
+If the estimator fails at some lambda (for example, the solver hits its iteration limit), the function should report it rather than return an empty or diagonal estimate, because \pkg{pulsar} cannot tell a silent failure apart from a genuinely empty graph and will count it as one. That biases the StARS and graphlet (G-StARS) stability, typically at small lambda where selection happens. A failure can be reported in either of two ways:
+\itemize{
+  \item set the corresponding element of \code{path} to \code{NULL} or \code{NA} (e.g. \code{path[i] <- list(NULL)}), or
+  \item return a logical vector named \code{failed}, the same length as \code{path}, that is \code{TRUE} at the failed lambdas (an \code{NA} is also treated as a failure).
+}
+Reported failures are left out of the summary statistics, so the selection frequencies at each lambda are computed over the successful subsample fits only. The number of failures per lambda is returned as \code{n.failed}, and the \code{fail.action} argument of \code{\link{pulsar}} controls whether lambdas with failures may be selected. Functions that do not report failures keep the previous behaviour.
 }
 \examples{
 if (requireNamespace("huge", quietly = TRUE)) {

@@ -115,6 +115,8 @@
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. See \code{batch.pulsar} for more parallelization options.
 #' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
+#' @param fail.action how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.
+#' @param fail.thresh threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
 #' \itemize{
@@ -127,9 +129,14 @@
 #' \itemize{
 #'    \item lb.index: the lambda index of the lower bound at \eqn{N=2} samples if \code{lb.stars} flag is set to TRUE
 #'    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
+#'    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
+#'    \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
 #'}
 #' @return call: the original function call
 #' @details
+#' \strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
+#'
+
 #' The options for \code{criterion} statistics are:
 #' \itemize{
 #'    \item stars (Stability approach to regularization selection)
@@ -170,7 +177,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                    thresh = 0.1, subsample.ratio = NULL,
                    rep.num = 20, seed=NULL,
                    lb.stars=FALSE, ub.stars=FALSE,
-                   ncores = 1, refit=TRUE)  {
+                   ncores = 1, refit=TRUE,
+                   fail.action = c("drop", "unselectable"), fail.thresh = 0)  {
   gcinfo(FALSE)
   n <- nrow(data)
   p <- ncol(data)
@@ -180,6 +188,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   knowncrits <- c("stars", "diss", "estrada", "gcd", "nc", "sufficiency") #"vgraphlet", "egraphlet",
   .critcheck0(criterion, knowncrits)
   subsample.ratio <- .ratcheck(subsample.ratio, n)
+  fail.action <- .failcheck(fail.action, fail.thresh)
 
   if (!is.null(seed)) set.seed(seed)
   ind.sample <- replicate(rep.num,
@@ -200,7 +209,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     if (isTRUE(attr(ind.sample, 'full')))
       return(tmp)
     else
-      return(tmp$path)
+      return(.fitpath(tmp))
   }
 
   if (lb.stars) {
@@ -266,7 +275,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     crit <- criterion[i]
 
     if (crit == "stars")
-      est$stars <- stars.stability(premerge.reord, thresh, rep.num, p)
+      est$stars <- stars.stability(premerge.reord, thresh, rep.num, p,
+                                   fail.action=fail.action, fail.thresh=fail.thresh)
 
     else if (crit == "diss")
       est$diss <-  diss.stability(premerge.reord, thresh, rep.num, p, nlams)
@@ -311,12 +321,20 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     tmpmerg[pind]   <- est$stars$merge
     est$stars$merge <- tmpmerg
 
+    tmpfail <- lb.est$n.failed ; tmpfit <- lb.est$n.fit
+    tmpfail[pind]      <- est$stars$n.failed
+    tmpfit[pind]       <- est$stars$n.fit
+    est$stars$n.failed <- tmpfail
+    est$stars$n.fit    <- tmpfit
+
     est$stars$lb.index  <- lb.est$opt.index
     est$stars$ub.index  <- ub.index
     est$stars$opt.index <- est$stars$opt.index + ub.index - 1L
   }
 
   if ("stars" %in% criterion) {
+      .failwarn(est$stars$n.failed, est$stars$n.failed + est$stars$n.fit,
+                est$stars$opt.index)
       if (est$stars$opt.index == 1) {
           direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
           warning(paste("Optimal lambda may be", direction, "than the supplied values"))
@@ -329,39 +347,72 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
 }
 
 #' @keywords internal
-.starsind <- function(summary, thresh, offset=1) {
+.starsind <- function(summary, thresh, offset=1, selectable=NULL) {
   if(any(summary >= thresh)){
-    return(max(which.max(summary >= thresh)[1] - offset, 1))
+    ind <- max(which.max(summary >= thresh)[1] - offset, 1)
   } else {
     warning("Optimal lambda may be outside the supplied values")
-    return(length(summary))
+    ind <- length(summary)
   }
+  if (is.null(selectable) || selectable[ind]) return(ind)
+  if (!any(selectable)) {
+    warning("No lambda is selectable given the failed subsample fits; returning the StARS index anyway", call.=FALSE)
+    return(ind)
+  }
+  cand  <- which(selectable)
+  lower <- cand[cand < ind]
+  new   <- if (length(lower)) max(lower) else min(cand)
+  warning(sprintf("Lambda index %d is unselectable due to failed subsample fits; selecting index %d instead",
+                  ind, new), call.=FALSE)
+  new
 }
 
 #' @keywords internal
-stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL) {
+stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL,
+                            n.failed=NULL, fail.action="drop", fail.thresh=0) {
     if (is.null(stars.thresh)) stars.thresh <- 0.1
     est <- list()
 
-
-    # do.call(batchtools::reduceResults,
-    #                  c(list(reg=reg, fun=starsaggfun), reduceargs))
-
     if (is.null(merge)) {
-      est$merge <- lapply(premerge, function(x) Reduce("+", x))
+      ## failed fits are NULL entries; drop them from the per-lambda sums
+      n.failed  <- vapply(premerge, function(x) sum(vapply(x, is.null, logical(1))), numeric(1))
+      est$merge <- lapply(premerge, function(x) {
+        x <- .dropfailed(x)
+        if (length(x)) Reduce("+", x) else NULL
+      })
       gc() # flush
-    } else est$merge <- merge
-    est$summary <- rep(0, length(est$merge))
+    } else {
+      est$merge <- merge
+      if (is.null(n.failed)) n.failed <- numeric(length(merge))
+    }
+    nlams   <- length(est$merge)
+    n.fit   <- rep.num - n.failed
+    est$summary <- rep(0, nlams)
 
-    for (i in 1:length(est$merge)) {
-      est$merge[[i]] <- est$merge[[i]]/rep.num
+    ok <- !vapply(est$merge, is.null, logical(1)) & n.fit > 0
+    if (!any(ok)) stop("All subsample fits failed at every lambda", call.=FALSE)
+    template <- est$merge[[which(ok)[1]]]
+    for (i in 1:nlams) {
+      if (!ok[i]) {
+        ## no successful fits: frequencies are unknown, keep the dimensions but
+        ## make sure this lambda can't be selected (summary is carried by cummax)
+        est$merge[[i]] <- template * 0
+        next
+      }
+      est$merge[[i]] <- est$merge[[i]]/n.fit[i]
       est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) / (p * (p - 1))
     }
+    if (any(!ok))
+      warning(sprintf("All subsample fits failed at lambda index %s",
+                      paste(which(!ok), collapse=", ")), call.=FALSE)
     ## monotonize variability
     est$summary   <- cummax(est$summary)
-    est$opt.index <- .starsind(est$summary, stars.thresh)
+    selectable    <- .selectable(n.failed, rep.num, fail.action, fail.thresh)
+    est$opt.index <- .starsind(est$summary, stars.thresh, selectable=selectable)
     est$criterion <- "stars.stability"
     est$thresh    <- stars.thresh
+    est$n.failed  <- n.failed
+    est$n.fit     <- n.fit
     return(est)
 }
 
@@ -381,22 +432,26 @@ sufficiency <- function(merge, rep.num, p, nlams) {
 #' @keywords internal
 diss.stability <- function(premerge, diss.thresh, rep.num, p, nlams) {
     est <- list()
+    premerge  <- lapply(premerge, .dropfailed)
+    n.fit     <- vapply(premerge, length, numeric(1))
     disslist  <- lapply(premerge, function(pm) lapply(pm, graph.diss))
-    est$merge <- lapply(disslist, function(dissmat) Reduce("+", dissmat)/rep.num)
-    mergesq   <- lapply(disslist, function(dissmat)
-                        Reduce(.sumsq, dissmat[-1], init=dissmat[[1]]^2)/rep.num)
+    est$merge <- lapply(seq_along(disslist), function(i)
+                        Reduce("+", disslist[[i]])/n.fit[i])
+    mergesq   <- lapply(seq_along(disslist), function(i)
+                        Reduce(.sumsq, disslist[[i]][-1], init=disslist[[i]][[1]]^2)/n.fit[i])
 
     gc() # flush
     est$summary <- rep(0, length(est$merge))
     for (i in 1:length(est$merge)) {
+        if (n.fit[i] == 0) { est$summary[i] <- NA ; next }
         tmp <- mergesq[[i]] - est$merge[[i]]^2
         est$summary[i] <- sum(triu(tmp))  / (p * (p - 1))
     }
     est$mergesq <- mergesq
     est$criterion <- "diss.stability"
+    est$n.failed  <- rep.num - n.fit
     return(est)
 }
-
 
 #estrada.stability <- function(premerge, thresh, rep.num, p, nlams) {
 #    est <- list()
@@ -435,25 +490,51 @@ estrada.stability <- function(merge, thresh, rep.num, p, nlams) {
 #' @keywords internal
 nc.stability <- function(premerge, thresh, rep.num, p, nlams) {
     est <- list()
-    est$merge <- sapply(premerge, function(x) sapply(x, natural.connectivity))
-    est$summary <- colMeans(est$merge)
+    est$merge <- sapply(premerge, function(x) vapply(x, function(g)
+                    if (is.null(g)) NA_real_ else natural.connectivity(g), numeric(1)))
+    est$merge <- matrix(est$merge, ncol=length(premerge))
+    est$summary   <- colMeans(est$merge, na.rm=TRUE)
     est$criterion <- "nc.stability"
+    est$n.failed  <- colSums(is.na(est$merge))
     return(est)
 }
 
 #' @importFrom stats dist
 #' @keywords internal
-gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL) {
+gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL,
+                          n.failed=NULL) {
     est <- list()
-    if (is.null(merge))
-        est$merge <- lapply(premerge, function(pm) dist(t(sapply(pm, gcvec))))
-    else
+    if (is.null(merge)) {
+        gcdpremerge <- lapply(premerge, function(pm) lapply(pm, function(g)
+                              if (is.null(g)) NULL else gcvec(g)))
+        tmp         <- .gcdmerge(gcdpremerge)
+        est$merge   <- tmp$merge
+        n.failed    <- tmp$n.failed
+    } else
         est$merge <- merge
+    if (is.null(n.failed)) n.failed <- numeric(nlams)
 
     est$summary <- vector('numeric', nlams)
-    for (i in 1:nlams) est$summary[i] <- mean(est$merge[[i]])
+    ## need at least two successful fits for a pairwise distance
+    for (i in 1:nlams) est$summary[i] <-
+        if (length(est$merge[[i]])) mean(est$merge[[i]]) else NA
     est$criterion <- "graphlet.stability"
+    est$n.failed  <- n.failed
     return(est)
+}
+
+## Pairwise graphlet correlation distances over successful fits
+##
+## @param gcdpremerge list (over lambda) of lists (over subsamples) of graphlet
+##        correlation vectors, with NULL for failed fits
+#' @keywords internal
+.gcdmerge <- function(gcdpremerge) {
+    n.failed <- vapply(gcdpremerge, function(x) sum(vapply(x, is.null, logical(1))), numeric(1))
+    merge    <- lapply(gcdpremerge, function(x) {
+        x <- .dropfailed(x)
+        if (length(x)) dist(do.call(rbind, x)) else dist(matrix(0, 0, 0))
+    })
+    list(merge=merge, n.failed=n.failed)
 }
 
 #egraphlet.stability <- function(premerge, thresh, rep.num, p, nlams, norbs=12) {
