@@ -15,7 +15,7 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libssl-dev libgomp1 libgmp-dev
+          sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libssl-dev libgomp1 libgmp-dev libglpk-dev
 
       # Test dependencies come as binaries from the public RSPM repo set by
       # setup-r; only huge is built from source, against GCC + libgomp, which
