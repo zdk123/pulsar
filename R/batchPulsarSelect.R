@@ -203,7 +203,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
     rep.num <- length(pulsar.jobs) # adjust denominator to successfull jobs
     if (lb.stars) rep.num <- rep.num + minN
     if (!doneRun)
-      warning(paste("Only", jdone, "jobs completed... proceeding anyway"))
+      .batchwarn(reg, id, jdone)
 
     for (i in 1:length(criterion)) {
       crit <- criterion[i]
@@ -291,6 +291,19 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
   if (length(defconffile)==0 || is.null(defconffile))
     defconffile <- findConfFile(conffile)
   defconffile
+}
+
+#' @keywords internal
+.batchwarn <- function(reg, id, jdone) {
+  ## some, but not all, jobs finished: say how many, and why the rest failed
+  msg <- trimws(batchtools::getErrorMessages(ids=id, reg=reg)$message)
+  tab <- table(msg)
+  why <- if (length(tab))
+    paste0(' ', paste(sprintf('%s job%s failed with: "%s"', tab,
+                              ifelse(tab > 1, 's', ''), names(tab)), collapse='; '), '.')
+  else ''
+  warning(sprintf('%d of %d jobs completed.%s Proceeding with the completed jobs.',
+                  nrow(jdone), nrow(id), why), call.=FALSE)
 }
 
 #' @keywords internal
