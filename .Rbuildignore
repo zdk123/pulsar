@@ -10,3 +10,4 @@
 ^CRAN-SUBMISSION$
 ^doc$
 ^Meta$
+^inst/modal/__pycache__$
