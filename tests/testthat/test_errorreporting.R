@@ -115,3 +115,21 @@ test_that("lb.stars with too few subsamples gives a clear error (#37)", {
                    wkdir=tempdir())), NA)
   }
 })
+
+test_that("ncores > 1 works with a fun defined in the global environment (#43)", {
+  ge <- globalenv()
+  on.exit(rm(list=c(".pulsar_t43_fun", ".pulsar_t43_X"), envir=ge))
+  assign(".pulsar_t43_fun", function(data, lambda)
+    huge::huge(data, lambda=lambda, verbose=FALSE), envir=ge)
+  assign(".pulsar_t43_X", MASS::mvrnorm(60, mu=rep(0,p), Sigma=dat$sigma), envir=ge)
+  ## the call is evaluated at top level, as a user would type it
+  call <- quote(pulsar(.pulsar_t43_X, .pulsar_t43_fun,
+                       list(lambda=getLamPath(1, .05, 6)),
+                       rep.num=4, ncores=2, refit=FALSE, seed=1))
+  expect_error(out <- suppressWarnings(eval(call, ge)), NA)
+  expect_equal(unique(out$stars$n.fit), 4)
+  ## and matches the serial run
+  call$ncores <- 1
+  ser <- suppressWarnings(eval(call, ge))
+  expect_equal(out$stars$summary, ser$stars$summary)
+})
