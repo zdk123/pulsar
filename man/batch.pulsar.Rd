@@ -23,7 +23,8 @@ batch.pulsar(
   cleanup = FALSE,
   refit = TRUE,
   fail.action = c("drop", "unselectable"),
-  fail.thresh = 0
+  fail.thresh = 0,
+  job.seed = NULL
 )
 }
 \arguments{
@@ -64,6 +65,8 @@ batch.pulsar(
 \item{fail.action}{how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.}
 
 \item{fail.thresh}{threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.}
+
+\item{job.seed}{\code{NULL} (the default), or a number: each job (subsample fit, and the full-data fit) then runs \code{fun} on its own independent L'Ecuyer-CMRG random number stream, derived from \code{job.seed} and the job's id. A \code{fun} that draws random numbers then gives the same results on every backend and number of workers, whatever order the jobs finish in, and your session's random number state is left as it was. With \code{NULL}, \code{fun} uses whatever random number state its worker has, as before. \code{job.seed} does not choose the subsamples: use \code{seed} for that.}
 }
 \value{
 an S3 object of class \code{\link{batch.pulsar}} with a named member for each stability criterion/metric. Within each of these are:

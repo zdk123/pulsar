@@ -19,7 +19,9 @@ pulsar(
   refit = TRUE,
   fail.action = c("drop", "unselectable"),
   fail.thresh = 0,
-  backend = "local"
+  backend = "local",
+  job.seed = NULL,
+  run.dir = NULL
 )
 }
 \arguments{
@@ -52,6 +54,10 @@ pulsar(
 \item{fail.thresh}{threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.}
 
 \item{backend}{where the jobs run. \code{"local"} (the default) runs them in this R session, or on a PSOCK cluster when \code{ncores > 1}. \code{"future"} runs each job as a \code{\link[future]{future}}, on whatever backend \code{\link[future]{plan}} has set: for example \code{plan(multisession)} on this machine, \code{plan(pulsar::\link{modal})} on Modal, or \code{plan(future.batchtools::batchtools_slurm)} on a Slurm cluster. Each future gets only its own rows of \code{data}, with \code{fun} and \code{fargs}. As with \code{ncores > 1}, a job whose \code{fun} raises an error is dropped with a warning. \code{ncores} is ignored with \code{"future"}.}
+
+\item{job.seed}{\code{NULL} (the default), or a number: each job (subsample fit, and the full-data fit) then runs \code{fun} on its own independent L'Ecuyer-CMRG random number stream, derived from \code{job.seed} and the job's id. A \code{fun} that draws random numbers then gives the same results on every backend and number of workers, whatever order the jobs finish in, and your session's random number state is left as it was. With \code{NULL}, \code{fun} uses whatever random number state its worker has, as before. \code{job.seed} does not choose the subsamples: use \code{seed} for that.}
+
+\item{run.dir}{\code{NULL} (the default), or a directory to save the run in, so it can be resumed. pulsar saves its plan there (which rows each subsample uses) and each job's result as soon as it finishes. If the session dies, call \code{pulsar} again with the same arguments and \code{run.dir}: the finished jobs are loaded, and only the rest are run, on whatever \code{backend} (or \code{\link[future]{plan}}) is set now. Jobs that were running when the session died are run again. The saved plan gives the same subsamples even without \code{seed}. pulsar stops if \code{run.dir} holds a run with other data, \code{fun}, \code{fargs} or settings. A job whose \code{fun} reports failed fits at some lambdas (see \code{\link{pulsar-function}}) counts as finished and is not run again. Use one \code{run.dir} for one session at a time. The directory is kept after the run; delete it when no longer needed.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

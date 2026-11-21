@@ -45,5 +45,8 @@ jobs:
 
       - name: Run tests
         run: Rscript -e 'library(testthat); library(pulsar); test_check("pulsar")'
+        env:
+          # run the skip_on_cran() tests (multi-process backends) too
+          NOT_CRAN: "true"
         working-directory: tests
         timeout-minutes: 10

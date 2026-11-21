@@ -48,7 +48,10 @@ refit.pulsar <- function(obj, criterion) {
     if (length(obj$est)) {
       est$est <- obj$est
     } else {
-      est$est <- do.call(eval(fin$fun), c(fin$fargs, list(fin$data)))
+      ## the full-data fit, on job 0's RNG stream when the run set job.seed
+      seed <- if (!is.null(fin$job.seed)) .jobstreams(fin$job.seed, 0L)[[1]]
+      spec <- .jobspec(0L, "full", seq_len(nrow(fin$data)), seed=seed)
+      est$est <- .run_job(spec, fin$data, eval(fin$fun), fin$fargs)
     }
 
     if (missing(criterion)) criterion <- eval(fin$criterion)
