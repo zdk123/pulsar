@@ -33,6 +33,7 @@ Imports:
     stats,
     utils,
     tools,
+    codetools,
     Matrix (>= 1.5)
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr

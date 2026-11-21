@@ -67,7 +67,8 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
                     lb.stars=FALSE, ub.stars=FALSE, rep.num = 20, seed=NULL,
                     wkdir=getwd(), regdir=NA, init="init", conffile='',
                     job.res=list(), cleanup=FALSE, refit=TRUE,
-                    fail.action=c("drop", "unselectable"), fail.thresh=0) {
+                    fail.action=c("drop", "unselectable"), fail.thresh=0,
+                    job.seed=NULL) {
 
     if (!requireNamespace('batchtools', quietly=TRUE)) {
       stop("'batchtools' package required to run 'batch.pulsar'")
@@ -90,7 +91,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
 
     if (lb.stars && !("stars" %in% criterion))
       stop('Lower/Upper bound method must be used with StARS')
-    jobs <- .planjobs(n, rep.num, subsample.ratio, refit, lb.stars, seed)
+    jobs <- .planjobs(n, rep.num, subsample.ratio, refit, lb.stars, seed, job.seed)
     ## batch job: run one job spec on the data
     estFun <- function(spec, fargs, data, fun) .run_job(spec, data, fun, fargs)
 
