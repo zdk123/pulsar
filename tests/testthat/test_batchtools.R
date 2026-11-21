@@ -63,3 +63,21 @@ test_that("batch.pulsar options", {
   test_all(est, cleanup=TRUE)
 
 })
+
+test_that("batch.pulsar submits each subsample once (#35)", {
+  njobs <- function(est) nrow(batchtools::getJobTable(reg=est$reg)) +
+    if (is.null(est$init.reg)) 0L else nrow(batchtools::getJobTable(reg=est$init.reg))
+  for (refit in c(FALSE, TRUE)) for (lb in c(FALSE, TRUE)) {
+    suppressWarnings(
+      est <- batch.pulsar(dat$data, huge::huge, fargs, rep.num=4, seed=rseed,
+                          lb.stars=lb, ub.stars=lb, wkdir=tmpdir, refit=refit))
+    expect_equal(njobs(est), 4 + refit, info=sprintf("refit=%s lb.stars=%s", refit, lb))
+    ## bounded runs keep the same selection as pulsar()
+    if (lb) {
+      ser <- suppressWarnings(pulsar(dat$data, huge::huge, fargs, rep.num=4, seed=rseed,
+                                     lb.stars=TRUE, ub.stars=TRUE, refit=refit))
+      expect_equal(est$stars$summary, ser$stars$summary)
+      expect_equal(est$stars$opt.index, ser$stars$opt.index)
+    }
+  }
+})
