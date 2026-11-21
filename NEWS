@@ -1,5 +1,6 @@
 pulsar 0.3.15
 ==============
+* batch.pulsar no longer fits one subsample twice when refit = TRUE and lb.stars = TRUE (#35). Results were unaffected
 * Failed subsample fits are no longer counted as empty graphs when `fun` reports them (#31): a `NULL`/`NA` path element, or a logical `failed` vector returned alongside `path`. Selection frequencies (StARS) and graphlet/other statistics at each lambda are computed over the successful fits only, the per-lambda counts are returned as `$stars$n.failed` and `$stars$n.fit`, and a warning is given when failures occur next to the selected lambda
 * New `fail.action` and `fail.thresh` arguments to `pulsar` and `batch.pulsar`: with `fail.action="unselectable"`, a lambda whose fraction of failed fits exceeds `fail.thresh` cannot be selected by StARS
 * Document in `?pulsar-function` that `fun` should signal non-convergence, since a silent failure is counted as an empty graph
