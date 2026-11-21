@@ -18,7 +18,8 @@ pulsar(
   ncores = 1,
   refit = TRUE,
   fail.action = c("drop", "unselectable"),
-  fail.thresh = 0
+  fail.thresh = 0,
+  backend = "local"
 )
 }
 \arguments{
@@ -49,6 +50,8 @@ pulsar(
 \item{fail.action}{how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.}
 
 \item{fail.thresh}{threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.}
+
+\item{backend}{where the jobs run. \code{"local"} (the default) runs them in this R session, or on a PSOCK cluster when \code{ncores > 1}. \code{"future"} runs each job as a \code{\link[future]{future}}, on whatever backend \code{\link[future]{plan}} has set: for example \code{plan(multisession)} on this machine, \code{plan(pulsar::\link{modal})} on Modal, or \code{plan(future.batchtools::batchtools_slurm)} on a Slurm cluster. Each future gets only its own rows of \code{data}, with \code{fun} and \code{fargs}. As with \code{ncores > 1}, a job whose \code{fun} raises an error is dropped with a warning. \code{ncores} is ignored with \code{"future"}.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:

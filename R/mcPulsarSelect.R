@@ -80,7 +80,15 @@
                            invokeRestart("muffleWarning")
                          })
   }
+  .collectjobs(out, warn, pass.errors)
+}
 
+## Check the results of a set of jobs, in job order: failed jobs are
+## "try-error" strings. With pass.errors the failures are dropped with a
+## warning (unless every job failed); otherwise they stop the run. `warn`
+## holds warnings raised by the jobs, reported when no job failed.
+#' @keywords internal
+.collectjobs <- function(out, warn=NULL, pass.errors=TRUE) {
   errors <- sapply(out, inherits, what="try-error")
   if (any(errors)) {
     error <- table(trimws(sapply(out[errors], '[', 1)))
@@ -122,6 +130,7 @@
 #' @param lb.stars Should the lower bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path.
 #' @param ub.stars Should the upper bound be computed after the first \eqn{N=2} subsamples (should result in considerable speedup and only implemented if stars is selected). If this option is selected, other summary metrics will only be applied to the smaller lambda path. This option is ignored if the lb.stars flag is FALSE.
 #' @param ncores number of cores to use for subsampling. When \code{ncores > 1}, a PSOCK cluster is used (via \code{\link[parallel]{parLapply}}) to avoid fork-safety issues with OpenMP libraries. Workers receive \code{fun} and \code{fargs}, but not other objects from your session, so a \code{fun} that calls your own helper functions should define them inside \code{fun} or load them from a package. See \code{batch.pulsar} for more parallelization options.
+#' @param backend where the jobs run. \code{"local"} (the default) runs them in this R session, or on a PSOCK cluster when \code{ncores > 1}. \code{"future"} runs each job as a \code{\link[future]{future}}, on whatever backend \code{\link[future]{plan}} has set: for example \code{plan(multisession)} on this machine, \code{plan(pulsar::\link{modal})} on Modal, or \code{plan(future.batchtools::batchtools_slurm)} on a Slurm cluster. Each future gets only its own rows of \code{data}, with \code{fun} and \code{fargs}. As with \code{ncores > 1}, a job whose \code{fun} raises an error is dropped with a warning. \code{ncores} is ignored with \code{"future"}.
 #' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #' @param fail.action how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.
 #' @param fail.thresh threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.
@@ -186,7 +195,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                    rep.num = 20, seed=NULL,
                    lb.stars=FALSE, ub.stars=FALSE,
                    ncores = 1, refit=TRUE,
-                   fail.action = c("drop", "unselectable"), fail.thresh = 0)  {
+                   fail.action = c("drop", "unselectable"), fail.thresh = 0,
+                   backend = "local")  {
   gcinfo(FALSE)
   ## evaluate fun now: parallel workers get the function itself, not a promise
   ## pointing at the caller's (unserialized) global environment (#43)
@@ -201,18 +211,17 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   subsample.ratio <- .ratcheck(subsample.ratio, n)
   fail.action <- .failcheck(fail.action, fail.thresh)
   .lbcheck(lb.stars, rep.num)
+  backend <- .backendcheck(backend)
 
   if (lb.stars && !("stars" %in% criterion))
     stop('Lower/Upper bound method must be used with StARS')
   jobs <- .planjobs(n, rep.num, subsample.ratio, refit, lb.stars, seed)
-  ## run one job on the data (a closure, so parallel workers get data and fun)
-  estFun <- function(spec, fargs) .run_job(spec, data, fun, fargs)
 
   isamp <- .stagejobs(jobs, 1L)
   minN  <- length(isamp)
   ## don't pass on errors if lb.stars = TRUE
-  premerge <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
-                            mc.preschedule = FALSE, pass.errors = !lb.stars)
+  premerge <- .execjobs(isamp, data, fun, fargs, backend, ncores,
+                        pass.errors = !lb.stars)
   errors <- attr(premerge, 'errors')
   # Adjust rep.num for failed jobs
   rep.num <- rep.num - ifelse(refit, sum(errors[-1]), sum(errors))
@@ -250,8 +259,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
     isamp <- .stagejobs(jobs, 2L)
-    tmp <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
-                         mc.preschedule = FALSE)
+    tmp <- .execjobs(isamp, data, fun, fargs, backend, ncores)
     # Adjust rep.num for failed jobs
     rep.num <- rep.num - sum(attr(tmp, 'errors'))
     premerge <- c(lb.premerge, tmp)

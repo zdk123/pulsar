@@ -8,11 +8,13 @@ Description: Model selection for penalized graphical models using the Stability 
 URL: https://github.com/zdk123/pulsar, https://arxiv.org/abs/1605.07072
 BugReports: https://github.com/zdk123/pulsar/issues
 Depends:
-    R (>= 3.2.0)
+    R (>= 3.6.0)
 License: GPL (>= 3)
 Suggests:
     batchtools (>= 0.9.10),
     fs (>= 1.2.2),
+    future (>= 1.40.0),
+    processx,
     checkmate (>= 1.8.5),
     orca,
     huge (>= 1.5),
