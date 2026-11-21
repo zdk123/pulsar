@@ -188,13 +188,15 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       }
       regdir <- gsub(paste("_", init, sep=""), "", regdir)
       ## Run graph estimation on the rest of the subsamples
-      isamp <- ind.sample[-(1:minN)]
+      ## skip every first-stage job: the full fit (if refit) and minN subsamples
+      isamp <- ind.sample[-(1:(minN+refit))]
       out   <- batchply(data, estFun, fun, fargs, isamp,
                         wkdir, regdir, conffile, job.res)
       reg <- out$reg ; id <- out$id
       doneRun <- batchtools::waitForJobs(reg=reg, id)
       jdone   <- batchtools::findDone(reg=reg, id)
-      pulsar.jobs <- intersect((1+refit):rep.num, jdone$job.id)
+      ## every job in this registry is a subsample fit
+      pulsar.jobs <- intersect(id$job.id, jdone$job.id)
       .batchcheck(reg, jdone, pulsar.jobs, FALSE)
     }
     rep.num <- length(pulsar.jobs) # adjust denominator to successfull jobs
