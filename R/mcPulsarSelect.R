@@ -22,6 +22,14 @@
 }
 
 #' @keywords internal
+.lbcheck <- function(lb.stars, rep.num) {
+    ## the bounds use the first 2 subsamples; the rest are fitted afterwards
+    if (isTRUE(lb.stars) && rep.num <= 2)
+        stop("lb.stars = TRUE needs rep.num > 2: the bounds are computed from the first 2 subsamples",
+             call.=FALSE)
+}
+
+#' @keywords internal
 .critcheck0 <- function(criterion, knowncrits) {
     if (!all(criterion %in% knowncrits)) {
        stop(paste('Unknown criterion', paste(criterion[!(criterion %in% knowncrits)],
@@ -189,6 +197,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   .critcheck0(criterion, knowncrits)
   subsample.ratio <- .ratcheck(subsample.ratio, n)
   fail.action <- .failcheck(fail.action, fail.thresh)
+  .lbcheck(lb.stars, rep.num)
 
   if (!is.null(seed)) set.seed(seed)
   ind.sample <- replicate(rep.num,
