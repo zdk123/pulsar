@@ -95,3 +95,23 @@ test_that("Job continues when subset of parallel jobs have errors/warnings", {
   expect_equivalent(out1$stars$opt.ind, out2$stars$opt.ind)
 
 })
+
+test_that("lb.stars with too few subsamples gives a clear error (#37)", {
+  options(batchtools.verbose=FALSE, batchtools.progress=FALSE)
+  h <- list(lambda=getLamPath(1, .05, 6), verbose=FALSE)
+  Y <- MASS::mvrnorm(60, mu=rep(0,p), Sigma=dat$sigma)
+  for (refit in c(FALSE, TRUE)) {
+    for (r in 1:2) {
+      expect_error(pulsar(Y, huge::huge, h, rep.num=r, lb.stars=TRUE, refit=refit),
+                   "rep.num > 2")
+      expect_error(batch.pulsar(Y, huge::huge, h, rep.num=r, lb.stars=TRUE, refit=refit,
+                                wkdir=tempdir()), "rep.num > 2")
+    }
+    ## the smallest valid case still runs
+    expect_error(suppressWarnings(
+      pulsar(Y, huge::huge, h, rep.num=3, lb.stars=TRUE, refit=refit)), NA)
+    expect_error(suppressWarnings(
+      batch.pulsar(Y, huge::huge, h, rep.num=3, lb.stars=TRUE, refit=refit,
+                   wkdir=tempdir())), NA)
+  }
+})
