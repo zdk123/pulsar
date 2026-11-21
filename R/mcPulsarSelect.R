@@ -199,35 +199,14 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   fail.action <- .failcheck(fail.action, fail.thresh)
   .lbcheck(lb.stars, rep.num)
 
-  if (!is.null(seed)) set.seed(seed)
-  ind.sample <- replicate(rep.num,
-                  sample(c(1L:n), floor(n * subsample.ratio),
-                  replace = FALSE), simplify=FALSE)
-  if (refit) {
-    tmp <- 1L:n
-    attr(tmp, 'full') <- TRUE
-    ind.sample <- c(list(tmp), ind.sample)
-  }
-  if (!is.null(seed)) set.seed(NULL)
-  ## wrap estimator
-  estFun <- function(ind.sample, fargs) {
-    tmp <- do.call(fun, c(fargs, list(data[ind.sample,])))
-    if (!('path' %in% names(tmp)))
-      stop('Error: expected data stucture with \'path\' member')
+  if (lb.stars && !("stars" %in% criterion))
+    stop('Lower/Upper bound method must be used with StARS')
+  jobs <- .planjobs(n, rep.num, subsample.ratio, refit, lb.stars, seed)
+  ## run one job on the data (a closure, so parallel workers get data and fun)
+  estFun <- function(spec, fargs) .run_job(spec, data, fun, fargs)
 
-    if (isTRUE(attr(ind.sample, 'full')))
-      return(tmp)
-    else
-      return(.fitpath(tmp))
-  }
-
-  if (lb.stars) {
-    if (!("stars" %in% criterion))
-      stop('Lower/Upper bound method must be used with StARS')
-    minN <- 2L + refit # Hard code for now
-  } else minN <- rep.num + refit
-
-  isamp <- ind.sample[1L:minN]
+  isamp <- .stagejobs(jobs, 1L)
+  minN  <- length(isamp)
   ## don't pass on errors if lb.stars = TRUE
   premerge <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
                             mc.preschedule = FALSE, pass.errors = !lb.stars)
@@ -267,8 +246,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     nlams <- length(fargs$lambda)
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
-    isamp <- ind.sample[-(1L:(minN+refit))]
-#    tmp   <- mclapply(isamp, estFun, fargs=fargs, mc.cores=ncores, mc.preschedule = FALSE)
+    isamp <- .stagejobs(jobs, 2L)
     tmp <- .try_mclapply(isamp, estFun, fargs = fargs, mc.cores = ncores,
                          mc.preschedule = FALSE)
     # Adjust rep.num for failed jobs
