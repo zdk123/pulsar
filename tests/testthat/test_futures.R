@@ -346,3 +346,36 @@ test_that("the Modal worker checks local package versions", {
   expect_error(pulsar:::.modal_eval(file.path(d, "in.rds"), file.path(d, "out.rds")),
                "notapkg none on the Modal worker")
 })
+
+test_that("the helper retries app creation when Modal's rate limit refuses it", {
+  py <- Sys.which("python3")
+  skip_if(!nzchar(py), "no python3")
+  script <- system.file("modal", "pulsar_modal.py", package="pulsar")
+  if (!nzchar(script))
+    script <- file.path(pkgload::pkg_path(testthat::test_path()), "inst", "modal", "pulsar_modal.py")
+  ## run _start_app against a stub app that is refused `fails` times
+  check <- tempfile(fileext=".py")
+  writeLines(c(
+    "import contextlib, random, re, sys, types",
+    "class Busy(Exception): pass",
+    "fails = int(sys.argv[2]); tries = []",
+    "@contextlib.contextmanager",
+    "def run():",
+    "    tries.append(1)",
+    "    if len(tries) <= fails: raise Busy('App create rate limit exceeded')",
+    "    yield 'app'",
+    "src = re.search(r'^def _start_app.*?(?=^def )', open(sys.argv[1]).read(), re.M | re.S).group(0)",
+    "ns = dict(modal=types.SimpleNamespace(exception=types.SimpleNamespace(ResourceExhaustedError=Busy)),",
+    "          app=types.SimpleNamespace(run=run), random=random, sys=sys,",
+    "          time=types.SimpleNamespace(sleep=lambda s: None))",
+    "exec(src, ns)",
+    "try:",
+    "    with contextlib.ExitStack() as st: r = ns['_start_app'](st, attempts=4)",
+    "    print(r, len(tries))",
+    "except Busy: print('refused', len(tries))"), check)
+  out <- function(fails) system2(py, c("-I", shQuote(check), shQuote(script), fails),
+                                 stdout=TRUE, stderr=FALSE)
+  expect_equal(out(0), "app 1")
+  expect_equal(out(3), "app 4")
+  expect_equal(out(4), "refused 4")
+})
