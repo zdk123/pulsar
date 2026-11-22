@@ -134,6 +134,26 @@ test_that("more jobs than workers: each job runs once, failures are not rerun", 
   })
 })
 
+test_that("a job's result is checkpointed when it finishes, while later jobs wait", {
+  skip_on_cran()
+  skip_if_not_installed("processx")
+  rd <- tempfile() ; seen <- tempfile()
+  ## each fit records how many checkpoints run.dir holds when it starts
+  cfun <- function(data, lambda) {
+    cat(length(list.files(rd, "^job_.*[.]rds$")), "\n", file=seen, append=TRUE)
+    huge::huge(data, lambda=lambda, verbose=FALSE)
+  }
+  with_modal(workers=2L, {
+    out <- pulsar(dat$data, fun=cfun, fargs=list(lambda=lams), rep.num=6, seed=10,
+                  backend="future", run.dir=rd)
+  })
+  n <- scan(seen, quiet=TRUE)
+  expect_length(n, 7L)
+  ## the third job is submitted once the first has finished, and that result
+  ## is saved before the third is submitted (not after the last one is)
+  expect_true(n[3] >= 1)
+})
+
 test_that("a helper that dies drops its running job, and a new helper starts", {
   skip_on_cran()
   skip_if_not_installed("processx")
