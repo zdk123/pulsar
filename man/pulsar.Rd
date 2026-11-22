@@ -21,7 +21,10 @@ pulsar(
   fail.thresh = 0,
   backend = "local",
   job.seed = NULL,
-  run.dir = NULL
+  run.dir = NULL,
+  stop.full = FALSE,
+  stop.chunk = NULL,
+  stop.margin = 1
 )
 }
 \arguments{
@@ -58,6 +61,12 @@ pulsar(
 \item{job.seed}{\code{NULL} (the default), or a number: each job (subsample fit, and the full-data fit) then runs \code{fun} on its own independent L'Ecuyer-CMRG random number stream, derived from \code{job.seed} and the job's id. A \code{fun} that draws random numbers then gives the same results on every backend and number of workers, whatever order the jobs finish in, and your session's random number state is left as it was. With \code{NULL}, \code{fun} uses whatever random number state its worker has, as before. \code{job.seed} does not choose the subsamples: use \code{seed} for that.}
 
 \item{run.dir}{\code{NULL} (the default), or a directory to save the run in, so it can be resumed. pulsar saves its plan there (which rows each subsample uses) and each job's result as soon as it finishes. If the session dies, call \code{pulsar} again with the same arguments and \code{run.dir}: the finished jobs are loaded, and only the rest are run, on whatever \code{backend} (or \code{\link[future]{plan}}) is set now. Jobs that were running when the session died are run again. The saved plan gives the same subsamples even without \code{seed}. pulsar stops if \code{run.dir} holds a run with other data, \code{fun}, \code{fargs} or settings. A job whose \code{fun} reports failed fits at some lambdas (see \code{\link{pulsar-function}}) counts as finished and is not run again. Use one \code{run.dir} for one session at a time. The directory is kept after the run; delete it when no longer needed.}
+
+\item{stop.full}{\code{TRUE} to stop the subsample fits early at the full-data fit's first failure: the full data is fitted first, and the subsamples are then fitted only on the lambdas before the first one at which the full-data fit failed (as reported by \code{fun}; see \code{\link{pulsar-function}}). Those later lambdas are not candidates for selection, and their \code{summary} is \code{NA}. Needs \code{refit = TRUE}. See Details.}
+
+\item{stop.chunk}{\code{NULL} (the default), or a number of lambdas: the subsamples are fitted down the lambda path that many lambdas at a time, and stop once the StARS summary crosses \code{thresh} and \code{stop.margin} more lambdas are fitted. Each chunk is one round of jobs, so smaller chunks save more fits but take more rounds. See Details.}
+
+\item{stop.margin}{with \code{stop.chunk}, the number of lambdas past the StARS crossing to fit before stopping. StARS selects the lambda before the crossing, so \code{0} is enough for the selection; the default, \code{1}, also fits the lambda after it.}
 }
 \value{
 an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -74,6 +83,12 @@ If \code{stars} is included as a criterion then additional arguments include
    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
    \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
 }
+With early stopping (\code{stop.full} or \code{stop.chunk}), \code{stars} also has
+\itemize{
+   \item n.run: the number of subsamples fitted at each lambda (0 past the cut)
+   \item stop: a list giving where and why the run stopped: \code{index}, the last lambda fitted on the subsamples; \code{reason}, one of \code{"crossing"} (the summary crossed \code{thresh}), \code{"full.failed"} (the full-data fit failed at the next lambda) or \code{"end"} (the whole path was fitted); \code{crossing}, the first lambda at which the summary reaches \code{thresh} (\code{NA} if none); \code{full.failed}, the first lambda at which the full-data fit failed (\code{NA} if none); and \code{chunk} and \code{margin}
+}
+and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut (\code{merge} is \code{NULL} there).
 
 call: the original function call
 }
@@ -82,6 +97,8 @@ Run pulsar using StARS' edge stability (or other criteria) to select an undirect
 }
 \details{
 \strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
+
+\strong{Early stopping.} Most of the cost of StARS can be subsample fits at small lambdas, past the point where the summary crosses \code{thresh}, which the selection never uses. \code{stop.full} and \code{stop.chunk} (which can be combined) skip those fits. The selected index, and \code{summary} up to the cut, are the same as from fitting the whole path, with the same \code{seed}, \code{job.seed}, subsamples and \code{fail.action}, except that with \code{stop.full} the lambdas from the full-data fit's first failure on can't be selected. This holds when \code{fun}'s fit at each lambda doesn't depend on the other lambdas it is given: with \code{stop.chunk} each chunk is a separate call of \code{fun}, starting from the job's \code{job.seed} stream, so a \code{fun} that warm-starts along the path, or draws random numbers across lambdas, can give (slightly) different fits. A subsample whose \code{fun} raises an error in any chunk is dropped at every lambda, as it would be with the whole path. Early stopping works with \code{criterion = "stars"} alone, without \code{lb.stars}, on any \code{backend}, and with \code{run.dir}, which saves each chunk as it finishes.
 
 The options for \code{criterion} statistics are:
 \itemize{
