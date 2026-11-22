@@ -42,7 +42,7 @@
 #' @keywords internal
 .stoprun <- function(jobs, data, fun, fargs, backend, ncores, run.dir, p,
                      thresh, fail.action, fail.thresh, stop.full, stop.chunk,
-                     stop.margin, tick=function(...) invisible()) {
+                     stop.margin, tick=function(...) invisible(), full.chunk=NULL) {
   lams <- fargs$lambda
   last <- length(lams)
   full <- Filter(function(j) identical(j$kind, "full"), jobs)
@@ -52,11 +52,12 @@
   jl <- NULL
   run <- function(js, phase) .execjobs(js, data, fun, fargs, backend, ncores,
                                        pass.errors=TRUE, run.dir=run.dir, tick=tick,
-                                       phase=phase)
+                                       phase=phase, full.chunk=full.chunk)
 
   if (stop.full) {
     res <- .execjobs(full, data, fun, fargs, backend, ncores, pass.errors=FALSE,
-                     run.dir=run.dir, tick=tick, phase="full data")
+                     run.dir=run.dir, tick=tick, phase="full data",
+                     full.chunk=full.chunk)
     jl <- attr(res, "jobs")
     fullmodel <- res[[1]]
     full <- list()
