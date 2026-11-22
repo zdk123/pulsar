@@ -101,6 +101,13 @@
   lams <- .joblambda(spec, fargs)
   idx  <- split(seq_along(lams), ceiling(seq_along(lams) / size))
   if (length(idx) < 2L) return(list(spec))
+  ## chunks of different sizes, so that .joinfull can tell a member with one
+  ## element per lambda from a constant whose length is the chunk size
+  if (length(lams) %% size == 0L) {
+    last <- idx[[length(idx)]]
+    idx[[length(idx)]] <- last[-length(last)]
+    idx <- c(idx, list(last[length(last)]))
+  }
   lapply(seq_along(idx), function(k) {
     s <- spec ; s$lambda <- lams[idx[[k]]] ; s$chunk <- k ; s
   })
@@ -110,18 +117,40 @@
 ## `failed`, and every other member with one element per lambda in each chunk
 ## (a vector or list without a class or dimensions), are concatenated, and so
 ## are their attributes with one element per lambda (such as timings kept on
-## `path`); other members and attributes are taken from the first chunk.
+## `path`); matrices with one column per lambda are joined by column. Other
+## members are taken from the first chunk, with a warning if they differ
+## between chunks (they may be per-lambda in a shape not joined here).
 #' @keywords internal
 .joinfull <- function(parts) {
   parts <- unname(parts)
   n   <- vapply(parts, function(x) length(x$path), integer(1))
   out <- parts[[1]]
+  odd <- character(0)
   for (nm in names(out)) {
     vals <- lapply(parts, `[[`, nm)
     if (nm %in% c("path", "failed") || .perlambda(vals, n))
       out[[nm]] <- .joinvals(vals, n)
+    else if (.percolumn(vals, n))
+      out[[nm]] <- do.call(cbind, vals)
+    else if (!all(vapply(vals[-1], identical, logical(1), vals[[1]])))
+      odd <- c(odd, nm)
   }
+  if (length(odd))
+    warning(sprintf(paste0("full.chunk: member%s %s of fun's output differ%s between chunks ",
+                           "and %s taken from the first chunk"),
+                    if (length(odd) > 1) "s" else "", paste0("'", odd, "'", collapse=", "),
+                    if (length(odd) > 1) "" else "s", if (length(odd) > 1) "are" else "is"),
+            call.=FALSE)
   out
+}
+
+## matrices (base or Matrix) with one column per lambda in each chunk
+#' @keywords internal
+.percolumn <- function(vals, n) {
+  dims <- lapply(vals, dim)
+  all(lengths(dims) == 2L) && all(vapply(dims, `[`, integer(1), 2L) == n) &&
+    length(unique(vapply(dims, `[`, integer(1), 1L))) == 1L &&
+    !any(vapply(vals, is.data.frame, logical(1)))
 }
 
 #' @keywords internal
