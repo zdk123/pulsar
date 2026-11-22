@@ -28,9 +28,9 @@ modal(
 )
 }
 \arguments{
-\item{install}{packages to install on the workers.(The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub, installed with \pkg{remotes} along with their CRAN dependencies. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.}
+\item{install}{packages to install on the workers. (The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub. GitHub and local packages are installed with \pkg{remotes}, along with their dependencies (\code{Depends}, \code{Imports}, \code{LinkingTo}, but not \code{Suggests}) from CRAN or Bioconductor. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.}
 
-\item{install.local}{paths to local R package source directories (such as your own unpublished packages) to install on the workers, with their CRAN dependencies. They are installed in dependency order, after pulsar and the GitHub packages, and each worker checks it has the version in the directory's \code{DESCRIPTION}.}
+\item{install.local}{paths to local R package source directories (such as your own unpublished packages) to install on the workers. They are installed in dependency order, after pulsar and the GitHub packages (so they may depend on those, but not the reverse), and each worker checks it has the version in the directory's \code{DESCRIPTION}. Compiled objects (\code{*.o}, \code{*.so}), \code{.git}, \code{renv} and check output are not uploaded.}
 
 \item{apt}{system libraries to install on the workers with \code{apt-get} (the default, \code{libglpk-dev}, is needed by \pkg{igraph}, which \pkg{huge} imports)}
 
