@@ -12,7 +12,7 @@ run <- function(...) {
   hfun <- function(data, lambda) huge::huge(data, lambda=lambda, verbose=FALSE)
   pulsar(dat$data, fun=hfun, fargs=list(lambda=lams), rep.num=6, seed=10, ...)
 }
-strip <- function(x) { x$call <- NULL ; x$envir <- NULL ; x }
+strip <- function(x) { x$call <- NULL ; x$envir <- NULL ; attr(x, "jobs") <- NULL ; x }  # jobs: timings
 combos <- expand.grid(refit=c(FALSE, TRUE), lb=c(FALSE, TRUE))
 
 test_that("backend argument is checked", {
@@ -378,4 +378,17 @@ test_that("the helper retries app creation when Modal's rate limit refuses it", 
   expect_equal(out(0), "app 1")
   expect_equal(out(3), "app 4")
   expect_equal(out(4), "refused 4")
+})
+
+test_that("log.dir keeps the Modal helper's log, and lost containers are recorded", {
+  skip_on_cran()
+  skip_if_not_installed("processx")
+  ld <- tempfile()
+  with_modal(fail=2L, log.dir=ld, {
+    expect_warning(out <- run(backend="future", refit=FALSE), "container lost")
+    j <- getJobs(out)
+    expect_equal(sum(j$status == "error"), 1L)
+    expect_match(j$error[j$status == "error"], "container lost")
+  })
+  expect_length(list.files(ld, "^modal-helper-.*\\.log$"), 1L)
 })

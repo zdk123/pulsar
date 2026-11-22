@@ -19,7 +19,7 @@ run <- function(..., fun=jitter_fun, rep.num=6) {
     warning=function(w) if (grepl("Optimal lambda may be|Accurate lower bound", conditionMessage(w)))
                           invokeRestart("muffleWarning"))
 }
-strip <- function(x) { x$call <- NULL ; x$envir <- NULL ; x }
+strip <- function(x) { x$call <- NULL ; x$envir <- NULL ; attr(x, "jobs") <- NULL ; x }  # jobs: timings
 ## PSOCK workers load the installed pulsar, which under devtools::test may
 ## be an older version
 dev_loaded <- function() requireNamespace("pkgload", quietly=TRUE) &&

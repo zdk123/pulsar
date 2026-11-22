@@ -11,12 +11,15 @@
 ## Layout of run.dir:
 ##   manifest.rds     list(key, jobs, pulsar): the plan and the fingerprint of
 ##                    the inputs it was made for
-##   job_<id>.rds     list(lambda, value): one finished job; `lambda` is the
+##   job_<id>.rds     list(lambda, value, info): one finished job (info: when
+##                    and where it ran); `lambda` is the
 ##                    path it was fitted on (bounded StARS narrows the path
 ##                    for stage 2, and a result is only reused for the same path)
 ##   job_<id>_chunk_<k>.rds
 ##                    the same, for one chunk of lambdas (early stopping with
 ##                    stop.chunk)
+##   jobs.csv         the record of the jobs (see joblog.R), one row appended
+##                    as each finishes
 
 ## Fingerprint of a run's inputs. Functions are compared by their code (not
 ## their bytecode, which changes when R compiles them), and a closure's
@@ -72,6 +75,7 @@
            "fargs or settings); use a new run.dir", call.=FALSE)
     ndone  <- length(list.files(run.dir, "^job_[0-9]+\\.rds$"))
     nchunk <- length(list.files(run.dir, "^job_[0-9]+_chunk_[0-9]+\\.rds$"))
+    .joblogopen(run.dir)
     message(sprintf("Resuming the run in '%s': %d of %d job results saved%s",
                     run.dir, ndone, length(m$jobs),
                     if (nchunk) sprintf(", and %d chunk results", nchunk) else ""))
@@ -81,6 +85,7 @@
   dir.create(run.dir, recursive=TRUE, showWarnings=FALSE)
   .ckwrite(list(key=key, jobs=jobs,
                 pulsar=as.character(utils::packageVersion("pulsar"))), manifest)
+  .joblogopen(run.dir)
   jobs
 }
 
@@ -106,19 +111,20 @@
 }
 
 #' @keywords internal
-.cksave <- function(run.dir, spec, value, lambda) {
+.cksave <- function(run.dir, spec, value, lambda, info=NULL) {
   if (!is.null(run.dir) && !inherits(value, "try-error"))
-    .ckwrite(list(lambda=lambda, value=value), .ckpath(run.dir, spec))
+    .ckwrite(list(lambda=lambda, value=value, info=info), .ckpath(run.dir, spec))
   invisible(value)
 }
 
-## list(found=, value=): a saved result for this job on this lambda path
+## list(found=, value=, info=): a saved result (info: its timing, see .jobinfo) for this job on this lambda path
 #' @keywords internal
 .ckload <- function(run.dir, spec, lambda) {
   path <- .ckpath(run.dir, spec)
   if (file.exists(path)) {
     saved <- readRDS(path)
-    if (identical(saved$lambda, lambda)) return(list(found=TRUE, value=saved$value))
+    if (identical(saved$lambda, lambda))
+      return(list(found=TRUE, value=saved$value, info=saved$info))
   }
-  list(found=FALSE, value=NULL)
+  list(found=FALSE, value=NULL, info=NULL)
 }
