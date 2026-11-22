@@ -11,7 +11,8 @@
 ## its cummax up to the crossing only on the lambdas before it, so the selected
 ## index and the summary up to the cut are the same as with the whole path
 ## (same seed, job.seed, subsamples and failure rule), provided `fun`'s fit at
-## a lambda doesn't depend on the other lambdas it is given (see ?pulsar). With
+## a lambda doesn't depend on the other lambdas it is given, and it doesn't
+## raise an error only at lambdas past the cut (see ?pulsar). With
 ## stop.full, lambdas from the first full-data failure on are not candidates.
 
 #' @keywords internal
