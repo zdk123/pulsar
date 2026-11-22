@@ -106,7 +106,10 @@ else:
                                       add_python="3.12")
 if APT:
     image = image.apt_install(*APT)
-deps = ["remotes", "Matrix", "future"] + (["BiocManager"] if bioc else []) + cran
+# BiocManager always: GitHub and local packages may import Bioconductor ones
+deps = ["remotes", "Matrix", "future", "BiocManager"] + cran
+# repos for remotes installs: CRAN (the image's Package Manager) and Bioconductor
+_REPOS = "options(repos=BiocManager::repositories()); "
 image = image.run_commands(
     _rscript(f"install.packages({_rvec(deps)})"),
     _rscript(f"stopifnot(all(sapply({_rvec(deps)}, requireNamespace)))"),
@@ -118,7 +121,11 @@ if bioc:
         secrets=secrets,
     )
 
-_IGNORE = ["*.Rcheck", "*.tar.gz", ".git", "doc", "Meta", "**/__pycache__"]
+# not uploaded from package directories (R/modal.R's .modalfiles skips the
+# same files): VCS and check output, editor and renv state, and objects
+# compiled on the controller, which would not link in the Linux image
+_IGNORE = ["*.Rcheck", "*.tar.gz", ".git", "doc", "Meta", ".Rproj.user", "renv",
+           ".Rhistory", "**/.DS_Store", "**/__pycache__", "**/*.o", "**/*.so", "**/*.dll"]
 if PULSAR_SOURCE:
     image = image.add_local_dir(PULSAR_SOURCE, "/opt/pulsar-src", copy=True,
                                 ignore=_IGNORE
@@ -134,13 +141,15 @@ elif modal.is_local():
     # the image is already built by then, so only the controller checks them
     raise RuntimeError("set PULSAR_MODAL_SOURCE or PULSAR_MODAL_REF")
 
-# GitHub and local packages come after pulsar, so they may depend on it. Their
-# CRAN dependencies are installed with them. A branch ref is cached at its
+# GitHub and local packages come after pulsar, so they may depend on it; local
+# ones come last, so they may depend on GitHub ones (not the reverse). Their
+# CRAN and Bioconductor dependencies (Depends, Imports, LinkingTo) are
+# installed with them. A branch ref is cached at its
 # first build; use a commit SHA, or rebuild=TRUE.
 for spec in github:
     image = image.run_commands(
         # remotes stops (failing the build) if the install fails
-        _rscript(f"remotes::install_github('{spec}', upgrade='never')"),
+        _rscript(_REPOS + f"remotes::install_github('{spec}', upgrade='never', dependencies=NA)"),
         secrets=secrets,
     )
 # a local package's files are part of the image, so changing one rebuilds
@@ -149,8 +158,8 @@ for i, path in enumerate(LOCAL):
     image = image.add_local_dir(path, f"/opt/local-src/{i}", copy=True,
                                 ignore=_IGNORE
     ).run_commands(
-        _rscript(f"remotes::install_local('/opt/local-src/{i}', upgrade='never', "
-                 "build=FALSE, dependencies=TRUE)"),
+        _rscript(_REPOS + f"remotes::install_local('/opt/local-src/{i}', upgrade='never', "
+                 "build=FALSE, dependencies=NA)"),
         secrets=secrets,
     )
 

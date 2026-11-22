@@ -17,8 +17,8 @@
 #'
 #' The first future starts a helper process that opens an ephemeral Modal app; it is stopped by \code{plan()} changing to another backend, or when R exits. A future whose container fails (lost worker, timeout, out of memory) is retried up to \code{retries} times, then raises a \code{FutureError}; an error raised by the future's own code is returned as usual.
 #'
-#' @param install packages to install on the workers.(The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub, installed with \pkg{remotes} along with their CRAN dependencies. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.
-#' @param install.local paths to local R package source directories (such as your own unpublished packages) to install on the workers, with their CRAN dependencies. They are installed in dependency order, after pulsar and the GitHub packages, and each worker checks it has the version in the directory's \code{DESCRIPTION}.
+#' @param install packages to install on the workers. (The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub. GitHub and local packages are installed with \pkg{remotes}, along with their dependencies (\code{Depends}, \code{Imports}, \code{LinkingTo}, but not \code{Suggests}) from CRAN or Bioconductor. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.
+#' @param install.local paths to local R package source directories (such as your own unpublished packages) to install on the workers. They are installed in dependency order, after pulsar and the GitHub packages (so they may depend on those, but not the reverse), and each worker checks it has the version in the directory's \code{DESCRIPTION}. Compiled objects (\code{*.o}, \code{*.so}), \code{.git}, \code{renv} and check output are not uploaded.
 #' @param secrets names of \href{https://modal.com/docs/guide/secrets}{Modal secrets} whose environment variables are available while packages are installed (for example one holding \code{GITHUB_PAT}). They are not passed to the futures.
 #' @param image a container image with R (and \code{Rscript}) to start from, instead of \code{rocker/r-ver:<r.version>}
 #' @param dockerfile path to a Dockerfile building such an image, instead of \code{image}
@@ -76,6 +76,8 @@ ModalFutureBackend <- function(install="huge", install.local=NULL, apt="libglpk-
       stop("modal: source must be a pulsar package directory", call.=FALSE)
   }
   if (!is.null(dockerfile)) dockerfile <- normalizePath(dockerfile, mustWork=TRUE)
+  if (length(secrets) && !all(grepl("^[A-Za-z0-9][A-Za-z0-9_.-]*$", secrets)))
+    stop("modal: secret names may only use letters, digits, '_', '.' and '-'", call.=FALSE)
   if (!is.null(ref) && (!grepl(.SPEC_REF, ref) || grepl("..", ref, fixed=TRUE)))
     stop("modal: ref must be a branch, tag or commit name", call.=FALSE)
   settings <- list(packages=.modalspecs(install), local=.modallocal(install.local),
@@ -107,13 +109,29 @@ attr(modal, "factory") <- ModalFutureBackend
 .modalkey <- function(settings) {
   f <- tempfile() ; on.exit(unlink(f))
   stamp <- lapply(c(settings$source, settings$local$dirs), function(d) {
-    files <- list.files(d, recursive=TRUE, full.names=TRUE)
-    info  <- file.info(files)[, c("size", "mtime")]
+    files <- .modalfiles(d)
+    info  <- file.info(file.path(d, files))[, c("size", "mtime")]
     paste(files, info$size, as.numeric(info$mtime))
   })
+  if (!is.null(settings$dockerfile))
+    stamp <- c(stamp, tools::md5sum(settings$dockerfile))
   writeLines(c(utils::capture.output(dput(settings[setdiff(names(settings), "verbose")])),
                unlist(stamp)), f)
   substr(unname(tools::md5sum(f)), 1, 10)
+}
+
+## The files of a package directory that are uploaded to the image: all but
+## those pulsar_modal.py's _IGNORE skips (relative paths)
+#' @keywords internal
+.modalfiles <- function(d) {
+  files <- list.files(d, recursive=TRUE, all.files=TRUE, no..=TRUE)
+  top   <- sub("/.*", "", files)
+  parts <- strsplit(files, "/", fixed=TRUE)
+  skip  <- top %in% c(".git", "doc", "Meta", ".Rproj.user", "renv", ".Rhistory") |
+           grepl("\\.Rcheck$", top) | (top == files & grepl("\\.tar\\.gz$", files)) |
+           grepl("\\.(o|so|dll)$", files) | basename(files) == ".DS_Store" |
+           vapply(parts, function(x) "__pycache__" %in% x, logical(1))
+  files[!skip]
 }
 
 ## Package specs are pasted into R code on the image builder, so only these
@@ -141,6 +159,8 @@ attr(modal, "factory") <- ModalFutureBackend
 #' @keywords internal
 .modallocal <- function(local) {
   if (!length(local)) return(NULL)
+  if (any(grepl("[\n\r]", local)))
+    stop("modal: install.local paths may not contain line breaks", call.=FALSE)
   dirs <- normalizePath(as.character(local), mustWork=TRUE)
   desc <- lapply(dirs, function(d) {
     f <- file.path(d, "DESCRIPTION")
@@ -165,7 +185,9 @@ attr(modal, "factory") <- ModalFutureBackend
   }
   i <- match(order, pkgs)
   list(dirs=dirs[i], packages=order,
-       versions=stats::setNames(vapply(desc[i], function(x) x[, "Version"], character(1)), order))
+       ## as packageVersion() reports them on the worker: "0.9-3" is "0.9.3"
+       versions=stats::setNames(vapply(desc[i], function(x)
+         as.character(package_version(x[, "Version"])), character(1)), order))
 }
 
 #' @exportS3Method future::nbrOfWorkers
