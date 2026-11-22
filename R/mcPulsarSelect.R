@@ -137,6 +137,9 @@
 #' @param run.dir \code{NULL} (the default), or a directory to save the run in, so it can be resumed. pulsar saves its plan there (which rows each subsample uses) and each job's result as soon as it finishes. If the session dies, call \code{pulsar} again with the same arguments and \code{run.dir}: the finished jobs are loaded, and only the rest are run, on whatever \code{backend} (or \code{\link[future]{plan}}) is set now. Jobs that were running when the session died are run again. The saved plan gives the same subsamples even without \code{seed}. pulsar stops if \code{run.dir} holds a run with other data, \code{fun}, \code{fargs} or settings. A job whose \code{fun} reports failed fits at some lambdas (see \code{\link{pulsar-function}}) counts as finished and is not run again. Use one \code{run.dir} for one session at a time. The directory is kept after the run; delete it when no longer needed.
 #' @param refit Boolean flag to refit on the full dataset after pulsar is run. (see also \code{\link{refit}})
 #' @param fail.action how to treat subsample fits that \code{fun} reports as failed (see Details and \code{\link{pulsar-function}}). With \code{"drop"} (default), failed fits are left out and selection frequencies at each lambda are computed over the successful fits only. With \code{"unselectable"}, failed fits are also left out and, in addition, a lambda whose fraction of failed fits exceeds \code{fail.thresh} cannot be selected by StARS; the nearest selectable lambda with a larger penalty is chosen instead. A lambda at which every fit failed is never selectable.
+#' @param stop.full \code{TRUE} to stop the subsample fits early at the full-data fit's first failure: the full data is fitted first, and the subsamples are then fitted only on the lambdas before the first one at which the full-data fit failed (as reported by \code{fun}; see \code{\link{pulsar-function}}). Those later lambdas are not candidates for selection, and their \code{summary} is \code{NA}. Needs \code{refit = TRUE}. See Details.
+#' @param stop.chunk \code{NULL} (the default), or a number of lambdas: the subsamples are fitted down the lambda path that many lambdas at a time, and stop once the StARS summary crosses \code{thresh} and \code{stop.margin} more lambdas are fitted. Each chunk is one round of jobs, so smaller chunks save more fits but take more rounds. See Details.
+#' @param stop.margin with \code{stop.chunk}, the number of lambdas past the StARS crossing to fit before stopping. StARS selects the lambda before the crossing, so \code{0} is enough for the selection; the default, \code{1}, also fits the lambda after it.
 #' @param fail.thresh threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -153,9 +156,18 @@
 #'    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
 #'    \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
 #'}
+#' With early stopping (\code{stop.full} or \code{stop.chunk}), \code{stars} also has
+#' \itemize{
+#'    \item n.run: the number of subsamples fitted at each lambda (0 past the cut)
+#'    \item stop: a list giving where and why the run stopped: \code{index}, the last lambda fitted on the subsamples; \code{reason}, one of \code{"crossing"} (the summary crossed \code{thresh}), \code{"full.failed"} (the full-data fit failed at the next lambda) or \code{"end"} (the whole path was fitted); \code{crossing}, the first lambda at which the summary reaches \code{thresh} (\code{NA} if none); \code{full.failed}, the first lambda at which the full-data fit failed (\code{NA} if none); and \code{chunk} and \code{margin}
+#'}
+#' and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut (\code{merge} is \code{NULL} there).
 #' @return call: the original function call
 #' @details
 #' \strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
+#'
+
+#' \strong{Early stopping.} Most of the cost of StARS can be subsample fits at small lambdas, past the point where the summary crosses \code{thresh}, which the selection never uses. \code{stop.full} and \code{stop.chunk} (which can be combined) skip those fits. The selected index, and \code{summary} up to the cut, are the same as from fitting the whole path, with the same \code{seed}, \code{job.seed}, subsamples and \code{fail.action}, except that with \code{stop.full} the lambdas from the full-data fit's first failure on can't be selected. This holds when \code{fun}'s fit at each lambda doesn't depend on the other lambdas it is given: with \code{stop.chunk} each chunk is a separate call of \code{fun}, starting from the job's \code{job.seed} stream, so a \code{fun} that warm-starts along the path, or draws random numbers across lambdas, can give (slightly) different fits. A subsample whose \code{fun} raises an error in any chunk is dropped at every lambda, as it would be with the whole path. Early stopping works with \code{criterion = "stars"} alone, without \code{lb.stars}, on any \code{backend}, and with \code{run.dir}, which saves each chunk as it finishes.
 #'
 
 #' The options for \code{criterion} statistics are:
@@ -200,7 +212,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                    lb.stars=FALSE, ub.stars=FALSE,
                    ncores = 1, refit=TRUE,
                    fail.action = c("drop", "unselectable"), fail.thresh = 0,
-                   backend = "local", job.seed = NULL, run.dir = NULL)  {
+                   backend = "local", job.seed = NULL, run.dir = NULL,
+                   stop.full = FALSE, stop.chunk = NULL, stop.margin = 1)  {
   gcinfo(FALSE)
   ## evaluate fun now: parallel workers get the function itself, not a promise
   ## pointing at the caller's (unserialized) global environment (#43)
@@ -216,6 +229,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   fail.action <- .failcheck(fail.action, fail.thresh)
   .lbcheck(lb.stars, rep.num)
   backend <- .backendcheck(backend)
+  early <- .stopcheck(stop.full, stop.chunk, stop.margin, criterion, lb.stars, refit)
 
   if (lb.stars && !("stars" %in% criterion))
     stop('Lower/Upper bound method must be used with StARS')
@@ -226,6 +240,13 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                     ub.stars=ub.stars, seed=seed, job.seed=job.seed)
     run.dir <- normalizePath(run.dir, mustWork=FALSE)  # workers may have another wd
     jobs <- .ckopen(run.dir, key, jobs)
+  }
+
+  if (early) {
+    es <- .stoprun(jobs, data, fun, fargs, backend, ncores, run.dir, p, thresh,
+                   fail.action, fail.thresh, stop.full, stop.chunk, stop.margin)
+    est <- list(stars=.stopstars(es, thresh, p, fail.action, fail.thresh))
+    return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame()))
   }
 
   isamp <- .stagejobs(jobs, 1L)
@@ -341,16 +362,23 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     est$stars$opt.index <- est$stars$opt.index + ub.index - 1L
   }
 
+  .pulsarout(est, fullmodel, criterion, match.call(), parent.frame())
+}
+
+## Final checks and the pulsar object
+#' @keywords internal
+.pulsarout <- function(est, fullmodel, criterion, call, envir) {
   if ("stars" %in% criterion) {
       .failwarn(est$stars$n.failed, est$stars$n.failed + est$stars$n.fit,
                 est$stars$opt.index)
       if (est$stars$opt.index == 1) {
-          direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
-          warning(paste("Optimal lambda may be", direction, "than the supplied values"))
+          direction <- if (any(est$stars$summary >= .1, na.rm=TRUE)) "larger" else "smaller"
+          warning(paste("Optimal lambda may be", direction, "than the supplied values"),
+                  call.=FALSE)
       }
   }
-  est$call  <- match.call()
-  est$envir <- parent.frame()
+  est$call  <- call
+  est$envir <- envir
   est$est   <- fullmodel
   return(structure(est, class="pulsar"))
 }

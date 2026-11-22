@@ -25,7 +25,7 @@
   warn <- NULL
   todo <- rep(TRUE, length(jobs))
   if (!is.null(run.dir)) {
-    saved <- lapply(jobs, .ckload, run.dir=run.dir, lambda=fargs$lambda)
+    saved <- lapply(jobs, function(j) .ckload(run.dir, j, .joblambda(j, fargs)))
     todo  <- !vapply(saved, `[[`, logical(1), "found")
     out[!todo] <- lapply(saved[!todo], `[[`, "value")
   }
@@ -52,7 +52,7 @@
     value <- .run_job(spec, data, fun, fargs)
     ## a failed save must not look like a failed fit (PSOCK workers turn
     ## errors into failed jobs), so it comes back as a marker
-    tryCatch(.cksave(run.dir, spec, value, fargs$lambda),
+    tryCatch(.cksave(run.dir, spec, value, .joblambda(spec, fargs)),
              pulsarSaveError=function(e)
                structure(list(message=conditionMessage(e)), class="pulsarSaveFailed"))
   }
@@ -80,7 +80,8 @@
                    globals=list(run_job=run_job, spec=spec,
                                 X=data[rows, , drop=FALSE], fun=fun, fargs=fargs),
                    packages="pulsar", seed=NULL, lazy=FALSE,
-                   label=sprintf("pulsar-job-%d", spec$id))
+                   label=sprintf("pulsar-job-%d%s", spec$id,
+                                 if (is.null(spec$chunk)) "" else sprintf("-chunk-%d", spec$chunk)))
   }
 
   out  <- vector("list", length(fs))
@@ -96,7 +97,7 @@
           warn <<- c(warn, conditionMessage(w))
           invokeRestart("muffleWarning")
         })
-      .cksave(run.dir, jobs[[i]], out[[i]], fargs$lambda)
+      .cksave(run.dir, jobs[[i]], out[[i]], .joblambda(jobs[[i]], fargs))
     }
     collected[done] <- TRUE
     pending <- setdiff(pending, done)

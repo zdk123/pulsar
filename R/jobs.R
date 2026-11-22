@@ -9,6 +9,10 @@
 ##          stage 2. Without lb.stars every job is in stage 1.
 ##   rows:  row indices of `data` the job is fitted on
 ##   seed:  NULL, or the job's own L'Ecuyer-CMRG RNG stream (see .jobstreams)
+##   lambda: NULL (fit on fargs$lambda), or the lambdas this job fits: early
+##          stopping (see earlystop.R) fits subsamples on part of the path
+##   chunk: NULL, or the number of the chunk of lambdas the job fits (early
+##          stopping with stop.chunk); saved results are kept per chunk
 
 #' @keywords internal
 .jobspec <- function(id, kind, rows, stage=1L, seed=NULL) {
@@ -89,6 +93,7 @@
     on.exit(restore())
     assign(".Random.seed", spec$seed, envir=globalenv())
   }
+  fargs$lambda <- .joblambda(spec, fargs)
   tmp <- do.call(fun, c(fargs, list(data[spec$rows, ])))
   if (!('path' %in% names(tmp)))
     stop('Error: expected data stucture with \'path\' member')
@@ -98,3 +103,7 @@
   else
     return(.fitpath(tmp))
 }
+
+## The lambdas a job fits
+#' @keywords internal
+.joblambda <- function(spec, fargs) if (is.null(spec$lambda)) fargs$lambda else spec$lambda
