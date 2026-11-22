@@ -52,6 +52,9 @@ print.batch.pulsar <- function(x, ...) {
             ", upper ", x$stars$ub.index, "\n", sep="")
     } else cat("\n")
     cat("Path length:", length(fin$fargs$lambda), "\n")
+    if (!is.null(x$stars$stop))
+        cat("Stopped early: subsamples fitted to index ", x$stars$stop$index,
+            " (", x$stars$stop$reason, ")\n", sep="")
     cat("Subsamples: ", fin$rep.num, "\n")
     cat("Graph dim:  ", ncol(fin$data), "\n")
     critext  <- ifelse(length(fin$criterion) > 1, "Criteria:", "Criterion:")
