@@ -140,6 +140,7 @@
 #' @param stop.full \code{TRUE} to stop the subsample fits early at the full-data fit's first failure: the full data is fitted first, and the subsamples are then fitted only on the lambdas before the first one at which the full-data fit failed (as reported by \code{fun}; see \code{\link{pulsar-function}}). Those later lambdas are not candidates for selection, and their \code{summary} is \code{NA}. Needs \code{refit = TRUE}. See Details.
 #' @param stop.chunk \code{NULL} (the default), or a number of lambdas: the subsamples are fitted down the lambda path that many lambdas at a time, and stop once the StARS summary crosses \code{thresh} and \code{stop.margin} more lambdas are fitted. Each chunk is one round of jobs, so smaller chunks save more fits but take more rounds. See Details.
 #' @param stop.margin with \code{stop.chunk}, the number of lambdas past the StARS crossing to fit before stopping. StARS selects the lambda before the crossing, so \code{0} is enough for the selection; the default, \code{1}, also fits the lambda after it.
+#' @param full.chunk \code{NULL} (the default), or a number of lambdas, at least 2: the full-data fit (\code{refit = TRUE}) is split into jobs on that many lambdas each, which run in parallel, and joined into one result: \code{path}, \code{failed} and every other member of \code{fun}'s output with one element per lambda (a plain vector or list) are concatenated, and other members are taken from the first chunk. On a backend with many workers this keeps a slow full-data fit from holding up the run (with \code{stop.full}, the subsamples wait for it). As with \code{stop.chunk}, the result is the same as one fit on the whole path when \code{fun}'s fit at a lambda doesn't depend on the other lambdas it is given (each chunk starts from the full-data job's \code{job.seed} stream).
 #' @param fail.thresh threshold, in \eqn{[0, 1)}, on the fraction of failed subsample fits above which a lambda is unselectable when \code{fail.action="unselectable"}. The default, \eqn{0}, makes any lambda with a failed fit unselectable.
 #'
 #' @return an S3 object of class \code{pulsar} with a named member for each stability metric run. Within each of these are:
@@ -215,7 +216,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                    ncores = 1, refit=TRUE,
                    fail.action = c("drop", "unselectable"), fail.thresh = 0,
                    backend = "local", job.seed = NULL, run.dir = NULL,
-                   stop.full = FALSE, stop.chunk = NULL, stop.margin = 1)  {
+                   stop.full = FALSE, stop.chunk = NULL, stop.margin = 1,
+                   full.chunk = NULL)  {
   gcinfo(FALSE)
   ## evaluate fun now: parallel workers get the function itself, not a promise
   ## pointing at the caller's (unserialized) global environment (#43)
@@ -232,6 +234,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   .lbcheck(lb.stars, rep.num)
   backend <- .backendcheck(backend)
   early <- .stopcheck(stop.full, stop.chunk, stop.margin, criterion, lb.stars, refit)
+  .fullchunkcheck(full.chunk, refit)
 
   if (lb.stars && !("stars" %in% criterion))
     stop('Lower/Upper bound method must be used with StARS')
@@ -252,7 +255,8 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
 
   if (early) {
     es <- .stoprun(jobs, data, fun, fargs, backend, ncores, run.dir, p, thresh,
-                   fail.action, fail.thresh, stop.full, stop.chunk, stop.margin, tick)
+                   fail.action, fail.thresh, stop.full, stop.chunk, stop.margin, tick,
+                   full.chunk)
     est <- list(stars=.stopstars(es, thresh, p, fail.action, fail.thresh))
     return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame(), es$jobs))
   }
@@ -262,6 +266,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   ## don't pass on errors if lb.stars = TRUE
   premerge <- .execjobs(isamp, data, fun, fargs, backend, ncores,
                         pass.errors = !lb.stars, run.dir = run.dir, tick = tick,
+                        full.chunk = full.chunk,
                         phase = if (lb.stars) sprintf("stage 1 (bounds, %s)",
                                                       .lamrange(1, nlams, nlams)))
   joblog <- attr(premerge, 'jobs')
@@ -654,3 +659,13 @@ gcd.stability <- function(premerge, thresh, rep.num, p, nlams, merge=NULL,
 #    est$criterion <- "graphlet.stability"
 #    return(est)
 #}
+
+#' @keywords internal
+.fullchunkcheck <- function(full.chunk, refit) {
+  if (is.null(full.chunk)) return(invisible())
+  if (!is.numeric(full.chunk) || length(full.chunk) != 1L || is.na(full.chunk) ||
+      full.chunk < 2 || full.chunk != round(full.chunk))
+    stop("full.chunk must be NULL or a whole number of lambdas, at least 2", call.=FALSE)
+  if (!refit) stop("full.chunk needs refit = TRUE: it splits the full-data fit", call.=FALSE)
+  invisible()
+}
