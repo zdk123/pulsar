@@ -32,7 +32,7 @@
 #' @param source path to a local pulsar source directory to install on the workers
 #' @param ref a GitHub ref (branch, tag or commit) of \code{zdk123/pulsar} to install on the workers
 #' @param r.version the \code{rocker/r-ver} image tag
-#' @param app name of the Modal app
+#' @param app name of the Modal app. Several R sessions can use the same name at once; when they start together, Modal's limit on how fast apps are created can refuse some, and those wait and retry (for up to a few minutes)
 #' @param python path to a Python with the \code{modal} package. By default, the \code{PULSAR_MODAL_PYTHON} environment variable, else the Python that runs the \code{modal} command line tool.
 #' @param verbose show Modal's progress output (image builds, container logs)
 #' @param envir unused
@@ -475,7 +475,8 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
 
 #' @keywords internal
 .modallog <- function(client) {
-  if (!file.exists(client$log)) return("(no log)")
+  if (!file.exists(client$log))
+    return("(no log: with verbose=TRUE the helper's output is printed above)")
   paste(utils::tail(readLines(client$log, warn=FALSE), 30), collapse="\n")
 }
 
