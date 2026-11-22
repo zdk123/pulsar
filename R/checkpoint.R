@@ -78,7 +78,7 @@
     .joblogopen(run.dir)
     message(sprintf("Resuming the run in '%s': %d of %d job results saved%s",
                     run.dir, ndone, length(m$jobs),
-                    if (nchunk) sprintf(", and %d chunk results", nchunk) else ""))
+                    if (nchunk) sprintf(", and %d results for chunks of lambdas", nchunk) else ""))
     return(m$jobs)
   }
   ## one run.dir is for one session at a time

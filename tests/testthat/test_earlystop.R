@@ -144,7 +144,7 @@ test_that("a stopped run resumes from run.dir", {
   ## lose the last chunk of two subsamples: only those are refitted
   last <- max(as.integer(sub(".*_chunk_([0-9]+).rds", "\\1", list.files(rd, "_chunk_"))))
   unlink(file.path(rd, sprintf("job_%06d_chunk_%03d.rds", 1:2, last)))
-  expect_message(again <- go(coldfun(cf), stop.chunk=2, job.seed=1, run.dir=rd), "chunk results")
+  expect_message(again <- go(coldfun(cf), stop.chunk=2, job.seed=1, run.dir=rd), "results for chunks of lambdas")
   expect_equal(nfits(cf), 2 * length(seq(2 * last - 1, ref$stars$stop$index)))
   same_pick(ref, again)
   expect_identical(again$stars$stop, ref$stars$stop)
