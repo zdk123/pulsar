@@ -24,7 +24,19 @@
 ## `phase` naming this set of jobs.
 #' @keywords internal
 .execjobs <- function(jobs, data, fun, fargs, backend="local", ncores=1,
-                      pass.errors=TRUE, run.dir=NULL, tick=NULL, phase=NULL) {
+                      pass.errors=TRUE, run.dir=NULL, tick=NULL, phase=NULL,
+                      full.chunk=NULL) {
+  ## a full-data fit split into chunks of lambdas (full.chunk) runs as several
+  ## jobs, joined back into one result before the results are checked
+  nparts <- 0L
+  if (!is.null(full.chunk)) {
+    isfull <- vapply(jobs, function(j) identical(j$kind, "full"), logical(1))
+    if (any(isfull)) {
+      parts  <- .splitfull(jobs[[which(isfull)]], fargs, full.chunk)
+      nparts <- length(parts)
+      jobs   <- c(parts, jobs[!isfull])
+    }
+  }
   step <- if (is.null(tick)) NULL else function(spec, status)
             tick(length(.joblambda(spec, fargs)),
                  ## the full-data fit is on the whole path, whatever the phase
@@ -73,9 +85,61 @@
     }
     warn <- res$warn
   }
+  if (nparts > 1L) {
+    bad <- vapply(out[1:nparts], inherits, logical(1), what="try-error")
+    joined <- if (any(bad)) out[[which(bad)[1]]] else .joinfull(out[1:nparts])
+    out <- c(list(joined), out[-(1:nparts)])
+  }
   out <- .collectjobs(out, warn, pass.errors)
   attr(out, "jobs") <- do.call(rbind, rows)
   out
+}
+
+## The full-data job as jobs on chunks of `size` lambdas
+#' @keywords internal
+.splitfull <- function(spec, fargs, size) {
+  lams <- .joblambda(spec, fargs)
+  idx  <- split(seq_along(lams), ceiling(seq_along(lams) / size))
+  if (length(idx) < 2L) return(list(spec))
+  lapply(seq_along(idx), function(k) {
+    s <- spec ; s$lambda <- lams[idx[[k]]] ; s$chunk <- k ; s
+  })
+}
+
+## Join the chunked full-data fits into one output of `fun`: `path` and
+## `failed`, and every other member with one element per lambda in each chunk
+## (a vector or list without a class or dimensions), are concatenated, and so
+## are their attributes with one element per lambda (such as timings kept on
+## `path`); other members and attributes are taken from the first chunk.
+#' @keywords internal
+.joinfull <- function(parts) {
+  parts <- unname(parts)
+  n   <- vapply(parts, function(x) length(x$path), integer(1))
+  out <- parts[[1]]
+  for (nm in names(out)) {
+    vals <- lapply(parts, `[[`, nm)
+    if (nm %in% c("path", "failed") || .perlambda(vals, n))
+      out[[nm]] <- .joinvals(vals, n)
+  }
+  out
+}
+
+#' @keywords internal
+.perlambda <- function(vals, n) {
+  all(lengths(vals) == n) &&
+    all(vapply(vals, function(v) (is.atomic(v) || is.list(v)) && is.null(dim(v)) &&
+                                 !is.object(v), logical(1)))
+}
+
+#' @keywords internal
+.joinvals <- function(vals, n) {
+  if (all(vapply(vals, is.null, logical(1)))) return(NULL)
+  res <- do.call(c, unname(vals))
+  for (a in setdiff(names(attributes(vals[[1]])), "names")) {
+    av <- lapply(vals, attr, which=a, exact=TRUE)
+    attr(res, a) <- if (.perlambda(av, n)) do.call(c, unname(av)) else av[[1]]
+  }
+  res
 }
 
 ## Run one job and time it: list(value, start, end, host)
