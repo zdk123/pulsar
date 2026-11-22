@@ -174,11 +174,12 @@ test_that("the Modal worker checks the pulsar version", {
 })
 
 test_that("modal settings reach the helper environment", {
-  env <- pulsar:::.modalenv(list(packages=c("huge", "clime"), apt="libglpk-dev",
+  env <- pulsar:::.modalenv(list(packages=c("huge", "clime"), apt="libglpk-dev", rebuild=FALSE,
                                  cpu=2, memory=512L, timeout=60L, retries=1L,
                                  workers=10L, source=NULL, ref="abc123",
                                  r.version="4.6.2", app="pulsar"))
-  expect_equal(env[["PULSAR_MODAL_R_PACKAGES"]], "huge,clime")
+  expect_equal(env[["PULSAR_MODAL_R_PACKAGES"]], "huge\nclime")
+  expect_equal(env[["MODAL_FORCE_BUILD"]], "0")
   expect_equal(env[["PULSAR_MODAL_CPU"]], "2")
   expect_equal(env[["PULSAR_MODAL_MAX_CONTAINERS"]], "10")
   expect_equal(env[["PULSAR_MODAL_REF"]], "abc123")
@@ -186,4 +187,95 @@ test_that("modal settings reach the helper environment", {
   oplan <- future::plan()
   on.exit(future::plan(oplan))
   expect_error(future::plan(pulsar::modal, source=tempdir()), "pulsar package directory")
+})
+
+## ---- packages for the Modal workers -------------------------------------
+
+test_that("modal package specs are validated", {
+  ok <- c("huge", "Matrix", "data.table", "bioc::SpiecEasi", "zdk123/SpiecEasi@a1b2c3d",
+          "owner/repo", "owner/my-repo/pkgdir@v1.2", "owner/repo@feature/x")
+  expect_identical(pulsar:::.modalspecs(ok), ok)
+  for (bad in c("huge'); system('rm -rf /'); ('", "a b", "../clampglasso", "~/pkg",
+                "owner/../x", ".hidden/repo", "owner/repo@..", "-x/repo",
+                "bioc::a;b", "owner/repo@$(id)", ""))
+    expect_error(pulsar:::.modalspecs(bad), "not a CRAN name", info=bad)
+  expect_error(future::plan(pulsar::modal, ref="main; rm -rf /"), "ref must be")
+  future::plan(future::sequential)
+})
+
+## a minimal package source directory
+mkpkg <- function(root, name, version="0.1.0", imports=NULL) {
+  d <- file.path(root, name) ; dir.create(file.path(d, "R"), recursive=TRUE)
+  writeLines(c(paste("Package:", name), paste("Version:", version), "Title: t",
+               "Description: t.", "License: MIT", "Encoding: UTF-8",
+               if (length(imports)) paste("Imports:", paste(imports, collapse=", "))),
+             file.path(d, "DESCRIPTION"))
+  writeLines(sprintf("%s_fun <- function() 1", name), file.path(d, "R", "f.R"))
+  d
+}
+
+test_that("install and install.local can be set through plan()", {
+  root <- tempfile() ; dir.create(root)
+  a <- mkpkg(root, "pkgA")
+  oplan <- future::plan()
+  on.exit(future::plan(oplan))
+  future::plan(pulsar::modal, ref="test", install=c("huge", "bioc::graph"),
+               install.local=a, secrets="github", rebuild=TRUE, image="rocker/r-ver:4.5.3")
+  be <- future::plan("backend")
+  expect_equal(be$modal$packages, c("huge", "bioc::graph"))
+  expect_equal(be$modal$local$packages, "pkgA")
+  expect_equal(be$modal$secrets, "github")
+  expect_true(be$modal$rebuild)
+  expect_equal(be$modal$image, "rocker/r-ver:4.5.3")
+})
+
+test_that("local packages are ordered by their dependencies", {
+  root <- tempfile() ; dir.create(root)
+  a <- mkpkg(root, "pkgA", imports=c("pkgB (>= 0.1)", "stats"))
+  b <- mkpkg(root, "pkgB", "1.2.3", imports="pkgC")
+  c <- mkpkg(root, "pkgC")
+  loc <- pulsar:::.modallocal(c(a, b, c))
+  expect_equal(loc$packages, c("pkgC", "pkgB", "pkgA"))
+  expect_equal(loc$dirs, normalizePath(c(c, b, a)))
+  expect_equal(loc$versions[["pkgB"]], "1.2.3")
+  expect_null(pulsar:::.modallocal(NULL))
+
+  x <- mkpkg(root, "pkgX", imports="pkgY") ; y <- mkpkg(root, "pkgY", imports="pkgX")
+  expect_error(pulsar:::.modallocal(c(x, y)), "circular")
+  expect_error(pulsar:::.modallocal(root), "no DESCRIPTION")
+  expect_error(pulsar:::.modallocal(c(a, a)), "same package twice")
+})
+
+test_that("local packages and image settings reach the helper", {
+  root <- tempfile() ; dir.create(root)
+  a <- mkpkg(root, "pkgA")
+  settings <- list(packages=c("huge", "bioc::graph", "o/r@abc"), local=pulsar:::.modallocal(a),
+                   apt="libglpk-dev", secrets=c("github", "other"), cpu=1, memory=512L,
+                   timeout=60L, retries=0L, workers=10L, source=NULL, ref="abc",
+                   r.version="4.6.2", image="rocker/r-ver:4.5.3", dockerfile=NULL,
+                   rebuild=TRUE, app="pulsar")
+  env <- pulsar:::.modalenv(settings)
+  expect_equal(env[["PULSAR_MODAL_R_PACKAGES"]], "huge\nbioc::graph\no/r@abc")
+  expect_equal(env[["PULSAR_MODAL_LOCAL"]], normalizePath(a))
+  expect_equal(env[["PULSAR_MODAL_SECRETS"]], "github,other")
+  expect_equal(env[["PULSAR_MODAL_IMAGE"]], "rocker/r-ver:4.5.3")
+  expect_equal(env[["MODAL_FORCE_BUILD"]], "1")
+
+  ## editing a local package gives a new helper key (so a fresh image)
+  k1 <- pulsar:::.modalkey(settings)
+  Sys.sleep(1.1)
+  cat("pkgA_fun2 <- function() 2\n", file=file.path(a, "R", "f.R"), append=TRUE)
+  expect_false(identical(pulsar:::.modalkey(settings), k1))
+})
+
+test_that("the Modal worker checks local package versions", {
+  d <- tempfile() ; dir.create(d)
+  saveRDS(list(data=NULL, pulsar=as.character(packageVersion("pulsar")),
+               packages=c(stats="0.0.1")), file.path(d, "in.rds"))
+  expect_error(pulsar:::.modal_eval(file.path(d, "in.rds"), file.path(d, "out.rds")),
+               "stats .* on the Modal worker, 0.0.1 in its local directory")
+  saveRDS(list(data=NULL, pulsar=as.character(packageVersion("pulsar")),
+               packages=c(notapkg="1.0")), file.path(d, "in.rds"))
+  expect_error(pulsar:::.modal_eval(file.path(d, "in.rds"), file.path(d, "out.rds")),
+               "notapkg none on the Modal worker")
 })
