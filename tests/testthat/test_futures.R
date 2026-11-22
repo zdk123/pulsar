@@ -268,6 +268,73 @@ test_that("local packages and image settings reach the helper", {
   expect_false(identical(pulsar:::.modalkey(settings), k1))
 })
 
+test_that("local package versions are compared as R reports them", {
+  root <- tempfile() ; dir.create(root)
+  a <- mkpkg(root, "pkgH", "0.9-3")
+  expect_equal(pulsar:::.modallocal(a)$versions[["pkgH"]], "0.9.3")
+  expect_equal(pulsar:::.modallocal(a)$versions[["pkgH"]],
+               as.character(package_version("0.9-3")))
+})
+
+test_that("only uploaded files count for the helper key", {
+  root <- tempfile() ; dir.create(root)
+  a <- mkpkg(root, "pkgF")
+  for (f in c(".git/config", "src/f.o", "src/f.so", "renv/x", ".Rproj.user/y", "R/.DS_Store",
+              "pkgF.Rcheck/z", "pkgF_0.1.tar.gz", ".Rbuildignore", "src/f.c", "inst/doc/v.html")) {
+    dir.create(dirname(file.path(a, f)), recursive=TRUE, showWarnings=FALSE)
+    writeLines("x", file.path(a, f))
+  }
+  files <- pulsar:::.modalfiles(a)
+  expect_setequal(files, c("DESCRIPTION", "R/f.R", ".Rbuildignore", "src/f.c", "inst/doc/v.html"))
+
+  dockerfile <- tempfile() ; writeLines("FROM rocker/r-ver:4.6.2", dockerfile)
+  settings <- list(local=pulsar:::.modallocal(a), dockerfile=dockerfile)
+  k1 <- pulsar:::.modalkey(settings)
+  Sys.sleep(1.1)
+  writeLines("y", file.path(a, "src", "f.o"))      # not uploaded: same key
+  expect_identical(pulsar:::.modalkey(settings), k1)
+  writeLines("^x$", file.path(a, ".Rbuildignore"))  # uploaded dotfile: new key
+  k2 <- pulsar:::.modalkey(settings)
+  expect_false(identical(k2, k1))
+  writeLines("FROM rocker/r-ver:4.5.3", dockerfile) # Dockerfile contents count
+  expect_false(identical(pulsar:::.modalkey(settings), k2))
+})
+
+test_that("install.local paths and secret names are checked", {
+  expect_error(pulsar:::.modallocal("a\nb"), "line breaks")
+  oplan <- future::plan()
+  on.exit(future::plan(oplan))
+  expect_error(future::plan(pulsar::modal, ref="test", secrets="a,b"), "secret names")
+  expect_error(future::plan(pulsar::modal, ref="test", secrets="$(id)"), "secret names")
+})
+
+test_that("the Python image builder accepts exactly the specs R accepts", {
+  py <- Sys.which("python3")
+  skip_if(!nzchar(py), "no python3")
+  script <- system.file("modal", "pulsar_modal.py", package="pulsar")
+  if (!nzchar(script))
+    script <- file.path(pkgload::pkg_path(testthat::test_path()), "inst", "modal", "pulsar_modal.py")
+  ## run the builder's validators without the modal package
+  check <- tempfile(fileext=".py")
+  writeLines(c(
+    "import sys, types",
+    "sys.modules['modal'] = types.SimpleNamespace()",
+    "src = open(sys.argv[1]).read().split('cran, bioc, github = _split_specs')[0]",
+    "ns = {}; exec(src, ns)",
+    "for x in sys.argv[2:]:",
+    "    try: ns['_split_specs']([x]); print('ok')",
+    "    except ValueError: print('bad')"), check)
+  specs <- c("huge", "data.table", "bioc::SpiecEasi", "zdk123/SpiecEasi@a1b2c3d",
+             "owner/my-repo/pkgdir@v1.2", "owner/repo@feature/x", "huge'); x('", "a b",
+             "../clampglasso", "~/pkg", "owner/../x", ".hidden/repo", "owner/repo@..",
+             "-x/repo", "bioc::a;b", "owner/repo@$(id)")
+  r_ok <- vapply(specs, function(x) !inherits(try(pulsar:::.modalspecs(x), silent=TRUE),
+                                              "try-error"), logical(1))
+  py_ok <- system2(py, c("-I", shQuote(check), shQuote(script), shQuote(specs)), stdout=TRUE) == "ok"
+  expect_equal(unname(py_ok), unname(r_ok))
+  expect_equal(sum(r_ok), 6L)
+})
+
 test_that("the Modal worker checks local package versions", {
   d <- tempfile() ; dir.create(d)
   saveRDS(list(data=NULL, pulsar=as.character(packageVersion("pulsar")),
