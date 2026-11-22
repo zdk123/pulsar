@@ -58,7 +58,7 @@ modal(
 
 \item{rebuild}{rebuild the worker image from scratch (for example to pick up new commits on a GitHub branch)}
 
-\item{app}{name of the Modal app}
+\item{app}{name of the Modal app. Several R sessions can use the same name at once; when they start together, Modal's limit on how fast apps are created can refuse some, and those wait and retry (for up to a few minutes)}
 
 \item{python}{path to a Python with the \code{modal} package. By default, the \code{PULSAR_MODAL_PYTHON} environment variable, else the Python that runs the \code{modal} command line tool.}
 

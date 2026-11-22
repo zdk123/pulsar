@@ -22,13 +22,16 @@ The worker image and resources are set by PULSAR_MODAL_* environment
 variables, which the R side fills from plan(pulsar::modal, ...).
 """
 
+import contextlib
 import os
 import pathlib
+import random
 import re
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 import modal
 
@@ -209,6 +212,20 @@ def _collect(call, outpath: pathlib.Path, done):
         done()
 
 
+def _start_app(stack, attempts=8):
+    # Modal limits how fast an account creates apps, so sessions started
+    # together (one per simulation draw, say) can be refused; wait and retry
+    for i in range(attempts):
+        try:
+            return stack.enter_context(app.run())
+        except modal.exception.ResourceExhaustedError as e:
+            if i == attempts - 1:
+                raise
+            wait = min(60, 2 ** i) * random.uniform(0.5, 1.5)
+            print(f"pulsar: {e} (retrying in {wait:.0f}s)", file=sys.stderr, flush=True)
+            time.sleep(wait)
+
+
 def serve():
     # stdout carries the protocol; send everything else (Modal's progress
     # output, prints) to stderr
@@ -222,7 +239,9 @@ def serve():
         proto.flush()
 
     calls = {}
-    with modal.enable_output(), app.run():
+    with contextlib.ExitStack() as stack:
+        stack.enter_context(modal.enable_output())
+        _start_app(stack)
         reply("ready")
         for line in sys.stdin:
             req = line.rstrip("\n").split("\t")
