@@ -24,6 +24,7 @@ variables, which the R side fills from plan(pulsar::modal, ...).
 
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -32,10 +33,24 @@ import threading
 import modal
 
 ENV = os.environ.get
+
+
+def _lines(name, default=""):
+    return [x for x in ENV(name, default).split("\n") if x.strip()]
+
+
 R_VERSION = ENV("PULSAR_MODAL_R_VERSION", "4.6.2")
-R_PACKAGES = [p for p in ENV("PULSAR_MODAL_R_PACKAGES", "huge").split(",") if p]
+# package specs, one per line: "pkg" (CRAN), "bioc::pkg" (Bioconductor) or
+# "owner/repo@ref" (GitHub)
+R_PACKAGES = _lines("PULSAR_MODAL_R_PACKAGES", "huge")
+# local package directories, one per line, in install (dependency) order
+LOCAL = _lines("PULSAR_MODAL_LOCAL")
 # system libraries; libglpk is needed by igraph, which huge imports
 APT = [p for p in ENV("PULSAR_MODAL_APT", "libglpk-dev").split(",") if p]
+# Modal secrets available to the package installs (e.g. one holding GITHUB_PAT)
+SECRETS = [s for s in ENV("PULSAR_MODAL_SECRETS", "").split(",") if s]
+BASE_IMAGE = ENV("PULSAR_MODAL_IMAGE", "")  # registry image with R, replaces rocker
+DOCKERFILE = ENV("PULSAR_MODAL_DOCKERFILE", "")  # or a Dockerfile building one
 PULSAR_SOURCE = ENV("PULSAR_MODAL_SOURCE", "")  # local package directory
 PULSAR_REF = ENV("PULSAR_MODAL_REF", "")  # GitHub ref, e.g. a commit SHA
 CPU = float(ENV("PULSAR_MODAL_CPU", "1"))
@@ -45,35 +60,99 @@ RETRIES = int(ENV("PULSAR_MODAL_RETRIES", "0"))
 MAX_CONTAINERS = int(ENV("PULSAR_MODAL_MAX_CONTAINERS", "100"))
 APP_NAME = ENV("PULSAR_MODAL_APP", "pulsar")
 
+# Specs are pasted into R code below, so only these shapes are accepted (the
+# R side checks them too, with the same patterns)
+_NAME = r"[A-Za-z][A-Za-z0-9.]*"
+SPEC_CRAN = re.compile(rf"^{_NAME}$")
+SPEC_BIOC = re.compile(rf"^bioc::({_NAME})$")
+SPEC_GITHUB = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*"
+                         r"(/[A-Za-z0-9_][A-Za-z0-9_./-]*)?(@[A-Za-z0-9_][A-Za-z0-9_./-]*)?$")
+SPEC_REF = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./-]*$")
+
 
 def _rvec(xs):
     return "c(" + ",".join(f"'{x}'" for x in xs) + ")"
 
 
-deps = ["remotes", "Matrix", "future"] + R_PACKAGES
-image = modal.Image.from_registry(f"rocker/r-ver:{R_VERSION}", add_python="3.12")
+def _split_specs(specs):
+    cran, bioc, github = [], [], []
+    for x in specs:
+        if ".." in x:
+            raise ValueError(f"package spec may not contain '..': {x!r}")
+        if SPEC_CRAN.match(x):
+            cran.append(x)
+        elif SPEC_BIOC.match(x):
+            bioc.append(SPEC_BIOC.match(x).group(1))
+        elif SPEC_GITHUB.match(x):
+            github.append(x)
+        else:
+            raise ValueError(f"not a CRAN, bioc:: or owner/repo@ref package spec: {x!r}")
+    return cran, bioc, github
+
+
+def _rscript(code):
+    return f"Rscript -e \"{code}\""
+
+
+cran, bioc, github = _split_specs(R_PACKAGES)
+if PULSAR_REF and (not SPEC_REF.match(PULSAR_REF) or ".." in PULSAR_REF):
+    raise ValueError(f"bad pulsar ref {PULSAR_REF!r}")
+secrets = [modal.Secret.from_name(s) for s in SECRETS]
+
+if DOCKERFILE:
+    image = modal.Image.from_dockerfile(DOCKERFILE, add_python="3.12")
+else:
+    image = modal.Image.from_registry(BASE_IMAGE or f"rocker/r-ver:{R_VERSION}",
+                                      add_python="3.12")
 if APT:
     image = image.apt_install(*APT)
+deps = ["remotes", "Matrix", "future"] + (["BiocManager"] if bioc else []) + cran
 image = image.run_commands(
-    f"Rscript -e \"install.packages({_rvec(deps)})\"",
-    f"Rscript -e \"stopifnot(all(sapply({_rvec(deps)}, requireNamespace)))\"",
+    _rscript(f"install.packages({_rvec(deps)})"),
+    _rscript(f"stopifnot(all(sapply({_rvec(deps)}, requireNamespace)))"),
 )
+if bioc:
+    image = image.run_commands(
+        _rscript(f"BiocManager::install({_rvec(bioc)}, update=FALSE, ask=FALSE); "
+                 f"stopifnot(all(sapply({_rvec(bioc)}, requireNamespace)))"),
+        secrets=secrets,
+    )
+
+_IGNORE = ["*.Rcheck", "*.tar.gz", ".git", "doc", "Meta", "**/__pycache__"]
 if PULSAR_SOURCE:
-    image = image.add_local_dir(
-        PULSAR_SOURCE,
-        "/opt/pulsar-src",
-        copy=True,
-        ignore=["*.Rcheck", "*.tar.gz", ".git", "doc", "Meta", "**/__pycache__"],
+    image = image.add_local_dir(PULSAR_SOURCE, "/opt/pulsar-src", copy=True,
+                                ignore=_IGNORE
     ).run_commands("R CMD INSTALL --no-docs --no-multiarch /opt/pulsar-src")
 elif PULSAR_REF:
     image = image.run_commands(
-        f"Rscript -e \"remotes::install_github('zdk123/pulsar@{PULSAR_REF}', "
-        "dependencies=FALSE, upgrade='never')\""
+        _rscript(f"remotes::install_github('zdk123/pulsar@{PULSAR_REF}', "
+                 "dependencies=FALSE, upgrade='never')"),
+        secrets=secrets,
     )
 elif modal.is_local():
     # Modal re-imports this file in each container without these variables;
     # the image is already built by then, so only the controller checks them
     raise RuntimeError("set PULSAR_MODAL_SOURCE or PULSAR_MODAL_REF")
+
+# GitHub and local packages come after pulsar, so they may depend on it. Their
+# CRAN dependencies are installed with them. A branch ref is cached at its
+# first build; use a commit SHA, or rebuild=TRUE.
+for spec in github:
+    image = image.run_commands(
+        # remotes stops (failing the build) if the install fails
+        _rscript(f"remotes::install_github('{spec}', upgrade='never')"),
+        secrets=secrets,
+    )
+# a local package's files are part of the image, so changing one rebuilds
+# from there on
+for i, path in enumerate(LOCAL):
+    image = image.add_local_dir(path, f"/opt/local-src/{i}", copy=True,
+                                ignore=_IGNORE
+    ).run_commands(
+        _rscript(f"remotes::install_local('/opt/local-src/{i}', upgrade='never', "
+                 "build=FALSE, dependencies=TRUE)"),
+        secrets=secrets,
+    )
 
 app = modal.App(APP_NAME, image=image)
 

@@ -13,11 +13,16 @@
 #'
 #' Requirements on the controlling machine: the \pkg{future} and \pkg{processx} packages, the \code{modal} Python package (\code{pip install modal}, or \code{uv tool install modal}), and a Modal token, set up once with \code{modal setup} (or the \code{MODAL_TOKEN_ID} and \code{MODAL_TOKEN_SECRET} environment variables). pulsar never reads or stores the token.
 #'
-#' Workers run a \code{rocker/r-ver} image with \pkg{future}, pulsar and the R packages in \code{packages}. The image is built on first use and cached by Modal, so later sessions with the same settings start quickly. pulsar on the workers is built from \code{source}, a local package directory, or installed from GitHub at \code{ref}; with neither, the commit the controller's pulsar was installed from (with \code{remotes::install_github}) is used, and the worker checks that its pulsar version matches the controller's.
+#' Workers run a \code{rocker/r-ver} image (or \code{image} / \code{dockerfile}) with \pkg{future}, pulsar, and the packages that \code{fun} needs: those in \code{install}, from CRAN, Bioconductor or GitHub, and the local package directories in \code{install.local}. The image is built on first use and cached by Modal, so later sessions with the same settings start quickly. Changing a file in an \code{install.local} package rebuilds the image from that package on. A GitHub branch is cached at its first build: pin a commit (\code{"owner/repo@<sha>"}), or set \code{rebuild=TRUE} to pick up new commits. pulsar on the workers is built from \code{source}, a local package directory, or installed from GitHub at \code{ref}; with neither, the commit the controller's pulsar was installed from (with \code{remotes::install_github}) is used, and the worker checks that its pulsar version matches the controller's.
 #'
 #' The first future starts a helper process that opens an ephemeral Modal app; it is stopped by \code{plan()} changing to another backend, or when R exits. A future whose container fails (lost worker, timeout, out of memory) is retried up to \code{retries} times, then raises a \code{FutureError}; an error raised by the future's own code is returned as usual.
 #'
-#' @param packages R packages to install on the workers, from CRAN (Posit Package Manager binaries)
+#' @param install packages to install on the workers.(The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub, installed with \pkg{remotes} along with their CRAN dependencies. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.
+#' @param install.local paths to local R package source directories (such as your own unpublished packages) to install on the workers, with their CRAN dependencies. They are installed in dependency order, after pulsar and the GitHub packages, and each worker checks it has the version in the directory's \code{DESCRIPTION}.
+#' @param secrets names of \href{https://modal.com/docs/guide/secrets}{Modal secrets} whose environment variables are available while packages are installed (for example one holding \code{GITHUB_PAT}). They are not passed to the futures.
+#' @param image a container image with R (and \code{Rscript}) to start from, instead of \code{rocker/r-ver:<r.version>}
+#' @param dockerfile path to a Dockerfile building such an image, instead of \code{image}
+#' @param rebuild rebuild the worker image from scratch (for example to pick up new commits on a GitHub branch)
 #' @param apt system libraries to install on the workers with \code{apt-get} (the default, \code{libglpk-dev}, is needed by \pkg{igraph}, which \pkg{huge} imports)
 #' @param cpu number of CPU cores per future
 #' @param memory memory per future, in MiB
@@ -36,7 +41,10 @@
 #' @examples
 #' \dontrun{
 #' ## requires a Modal account and the modal Python package
-#' future::plan(pulsar::modal, packages="huge", cpu=1, memory=1024)
+#' future::plan(pulsar::modal, install=c("huge", "bioc::SpiecEasi"), cpu=1, memory=1024)
+#' ## your own package, and a private GitHub one (with a Modal secret holding GITHUB_PAT)
+#' future::plan(pulsar::modal, install=c("huge", "me/privatepkg@<sha>"),
+#'              install.local="~/src/mypkg", secrets="github")
 #' p <- 40 ; dat <- MASS::mvrnorm(100, rep(0, p), diag(p))
 #' lams <- getLamPath(getMaxCov(dat), .05, 10)
 #' out <- pulsar(dat, fun=huge::huge, fargs=list(lambda=lams), rep.num=50,
@@ -44,10 +52,11 @@
 #' future::plan(future::sequential)   # stops the Modal app
 #' }
 #' @export
-modal <- function(packages="huge", apt="libglpk-dev", cpu=1, memory=2048,
-                  timeout=3600, retries=0L, workers=100L, source=NULL, ref=NULL,
-                  r.version="4.6.2", app="pulsar", python=NULL, verbose=FALSE,
-                  ..., envir=parent.frame()) {
+modal <- function(install="huge", install.local=NULL, apt="libglpk-dev", secrets=NULL,
+                  cpu=1, memory=2048, timeout=3600, retries=0L, workers=100L,
+                  source=NULL, ref=NULL, r.version="4.6.2", image=NULL,
+                  dockerfile=NULL, rebuild=FALSE, app="pulsar", python=NULL,
+                  verbose=FALSE, ..., envir=parent.frame()) {
   stop("INTERNAL ERROR: pulsar::modal() is a future plan; use future::plan(pulsar::modal)")
 }
 class(modal) <- c("modal", "multiprocess", "future", "function")
@@ -55,19 +64,26 @@ attr(modal, "init") <- TRUE
 
 ## The future backend made by plan(modal, ...)
 #' @keywords internal
-ModalFutureBackend <- function(packages="huge", apt="libglpk-dev", cpu=1, memory=2048,
-                               timeout=3600, retries=0L, workers=100L, source=NULL,
-                               ref=NULL, r.version="4.6.2", app="pulsar", python=NULL,
+ModalFutureBackend <- function(install="huge", install.local=NULL, apt="libglpk-dev",
+                               secrets=NULL, cpu=1, memory=2048, timeout=3600,
+                               retries=0L, workers=100L, source=NULL, ref=NULL,
+                               r.version="4.6.2", image=NULL, dockerfile=NULL,
+                               rebuild=FALSE, app="pulsar", python=NULL,
                                verbose=FALSE, ..., envir=NULL) {
   if (!is.null(source)) {
     source <- normalizePath(source, mustWork=TRUE)
     if (!file.exists(file.path(source, "DESCRIPTION")))
       stop("modal: source must be a pulsar package directory", call.=FALSE)
   }
-  settings <- list(packages=as.character(packages), apt=as.character(apt), cpu=cpu,
+  if (!is.null(dockerfile)) dockerfile <- normalizePath(dockerfile, mustWork=TRUE)
+  if (!is.null(ref) && (!grepl(.SPEC_REF, ref) || grepl("..", ref, fixed=TRUE)))
+    stop("modal: ref must be a branch, tag or commit name", call.=FALSE)
+  settings <- list(packages=.modalspecs(install), local=.modallocal(install.local),
+                   apt=as.character(apt), secrets=as.character(secrets), cpu=cpu,
                    memory=as.integer(memory), timeout=as.integer(timeout),
                    retries=as.integer(retries), workers=as.integer(workers),
-                   source=source, ref=ref, r.version=r.version, app=app,
+                   source=source, ref=ref, r.version=r.version, image=image,
+                   dockerfile=dockerfile, rebuild=isTRUE(rebuild), app=app,
                    python=python, verbose=verbose)
   core <- future::FutureBackend(reg=paste0("workers-modal-", .modalkey(settings)),
                                 workers=as.integer(workers), modal=settings, ...,
@@ -84,11 +100,72 @@ attr(modal, "factory") <- ModalFutureBackend
 #' @keywords internal
 .future_internal <- function(name) get(name, envir=asNamespace("future"), inherits=FALSE)
 
+## Names the helper for these settings. Local packages count by their file
+## sizes and modification times, so editing one starts a new helper (and so
+## a new image) instead of reusing the running one.
 #' @keywords internal
 .modalkey <- function(settings) {
   f <- tempfile() ; on.exit(unlink(f))
-  writeLines(utils::capture.output(dput(settings[setdiff(names(settings), "verbose")])), f)
+  stamp <- lapply(c(settings$source, settings$local$dirs), function(d) {
+    files <- list.files(d, recursive=TRUE, full.names=TRUE)
+    info  <- file.info(files)[, c("size", "mtime")]
+    paste(files, info$size, as.numeric(info$mtime))
+  })
+  writeLines(c(utils::capture.output(dput(settings[setdiff(names(settings), "verbose")])),
+               unlist(stamp)), f)
   substr(unname(tools::md5sum(f)), 1, 10)
+}
+
+## Package specs are pasted into R code on the image builder, so only these
+## shapes are allowed (the same patterns as in pulsar_modal.py)
+.SPEC_NAME   <- "[A-Za-z][A-Za-z0-9.]*"
+.SPEC_CRAN   <- paste0("^", .SPEC_NAME, "$")
+.SPEC_BIOC   <- paste0("^bioc::", .SPEC_NAME, "$")
+.SPEC_GITHUB <- "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*(/[A-Za-z0-9_][A-Za-z0-9_./-]*)?(@[A-Za-z0-9_][A-Za-z0-9_./-]*)?$"
+.SPEC_REF    <- "^[A-Za-z0-9_][A-Za-z0-9_./-]*$"
+
+#' @keywords internal
+.modalspecs <- function(packages) {
+  packages <- as.character(packages)
+  ok <- (grepl(.SPEC_CRAN, packages) | grepl(.SPEC_BIOC, packages) |
+         grepl(.SPEC_GITHUB, packages)) & !grepl("..", packages, fixed=TRUE)
+  if (!all(ok))
+    stop("modal: not a CRAN name, \"bioc::name\" or \"owner/repo@ref\": ",
+         paste(sQuote(packages[!ok], FALSE), collapse=", "),
+         ". Local package directories go in `install.local`.", call.=FALSE)
+  packages
+}
+
+## Local package directories: their names and versions, in an order where
+## each comes after the local packages it depends on
+#' @keywords internal
+.modallocal <- function(local) {
+  if (!length(local)) return(NULL)
+  dirs <- normalizePath(as.character(local), mustWork=TRUE)
+  desc <- lapply(dirs, function(d) {
+    f <- file.path(d, "DESCRIPTION")
+    if (!file.exists(f))
+      stop("modal: no DESCRIPTION in install.local directory ", d, call.=FALSE)
+    read.dcf(f, fields=c("Package", "Version", "Depends", "Imports", "LinkingTo"))
+  })
+  pkgs <- vapply(desc, function(x) x[, "Package"], character(1))
+  if (anyDuplicated(pkgs))
+    stop("modal: the same package twice in `install.local`: ", pkgs[duplicated(pkgs)], call.=FALSE)
+  needs <- lapply(desc, function(x) {
+    deps <- unlist(strsplit(paste(stats::na.omit(x[, c("Depends", "Imports", "LinkingTo")]),
+                                  collapse=","), ","))
+    intersect(trimws(sub("\\(.*", "", deps)), pkgs)
+  })
+  order <- character(0)
+  while (length(order) < length(pkgs)) {
+    ready <- setdiff(pkgs[vapply(needs, function(n) all(n %in% order), logical(1))], order)
+    if (!length(ready))
+      stop("modal: circular dependencies among `install.local` packages", call.=FALSE)
+    order <- c(order, ready)
+  }
+  i <- match(order, pkgs)
+  list(dirs=dirs[i], packages=order,
+       versions=stats::setNames(vapply(desc[i], function(x) x[, "Version"], character(1)), order))
 }
 
 #' @exportS3Method future::nbrOfWorkers
@@ -127,7 +204,8 @@ launchFuture.ModalFutureBackend <- function(backend, future, ...) {
   key <- sprintf("f%06d", client$counter <- client$counter + 1L)
   inpath  <- file.path(client$dir, paste0(key, ".in.rds"))
   outpath <- file.path(client$dir, paste0(key, ".out.rds"))
-  saveRDS(list(data=getFutureData(future), pulsar=client$version), inpath)
+  saveRDS(list(data=getFutureData(future), pulsar=client$version,
+               packages=client$expect), inpath)
   future[["backend"]] <- backend
   future[["modal"]]   <- list(key=key, inpath=inpath, outpath=outpath, client=client)
   future[["state"]]   <- "submitted"
@@ -259,7 +337,12 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
 .modalenv <- function(settings) {
   ref <- .modalref(settings)
   c(PULSAR_MODAL_R_VERSION      = settings$r.version,
-    PULSAR_MODAL_R_PACKAGES     = paste(settings$packages, collapse=","),
+    PULSAR_MODAL_R_PACKAGES     = paste(settings$packages, collapse="\n"),
+    PULSAR_MODAL_LOCAL          = paste(settings$local$dirs, collapse="\n"),
+    PULSAR_MODAL_SECRETS        = paste(settings$secrets, collapse=","),
+    PULSAR_MODAL_IMAGE          = settings$image %||% "",
+    PULSAR_MODAL_DOCKERFILE     = settings$dockerfile %||% "",
+    MODAL_FORCE_BUILD           = if (isTRUE(settings$rebuild)) "1" else "0",
     PULSAR_MODAL_APT            = paste(settings$apt, collapse=","),
     PULSAR_MODAL_SOURCE         = settings$source %||% "",
     PULSAR_MODAL_REF            = ref %||% "",
@@ -320,6 +403,7 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
   client$process <- proc ; client$dir <- dir ; client$log <- log
   client$counter <- 0L ; client$buffer <- character(0)
   client$version <- as.character(utils::packageVersion("pulsar"))
+  client$expect  <- settings$local$versions
   reg.finalizer(client, function(e) .modalquit(e), onexit=TRUE)
 
   ## the first start builds the worker image, which can take a few minutes
@@ -403,6 +487,13 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
   here <- as.character(utils::packageVersion("pulsar"))
   if (!identical(here, payload$pulsar))
     stop(sprintf("pulsar %s on the Modal worker, %s on the controller", here, payload$pulsar))
+  ## local packages: the worker must have the version in their DESCRIPTION
+  for (pkg in names(payload$packages)) {
+    have <- tryCatch(as.character(utils::packageVersion(pkg)), error=function(e) "none")
+    if (!identical(have, payload$packages[[pkg]]))
+      stop(sprintf("%s %s on the Modal worker, %s in its local directory",
+                   pkg, have, payload$packages[[pkg]]))
+  }
   evalFuture <- .future_internal("evalFuture")
   saveRDS(evalFuture(payload$data), outpath)
   invisible(NULL)
