@@ -42,7 +42,7 @@
 #' @keywords internal
 .stoprun <- function(jobs, data, fun, fargs, backend, ncores, run.dir, p,
                      thresh, fail.action, fail.thresh, stop.full, stop.chunk,
-                     stop.margin) {
+                     stop.margin, tick=function(...) invisible()) {
   lams <- fargs$lambda
   last <- length(lams)
   full <- Filter(function(j) identical(j$kind, "full"), jobs)
@@ -50,12 +50,13 @@
   fullmodel <- NULL
   m <- NA_integer_
   jl <- NULL
-  run <- function(js) .execjobs(js, data, fun, fargs, backend, ncores,
-                                pass.errors=TRUE, run.dir=run.dir)
+  run <- function(js, phase) .execjobs(js, data, fun, fargs, backend, ncores,
+                                       pass.errors=TRUE, run.dir=run.dir, tick=tick,
+                                       phase=phase)
 
   if (stop.full) {
     res <- .execjobs(full, data, fun, fargs, backend, ncores, pass.errors=FALSE,
-                     run.dir=run.dir)
+                     run.dir=run.dir, tick=tick, phase="full data")
     jl <- attr(res, "jobs")
     fullmodel <- res[[1]]
     full <- list()
@@ -66,6 +67,9 @@
       if (last < 1L)
         stop("The full-data fit failed at the first lambda: no lambda can be selected",
              call.=FALSE)
+      tick((length(lams) - last) * length(subs),
+           sprintf("full-data fit failed at lambda %d: skipping %d fits", m,
+                   (length(lams) - last) * length(subs)))
     }
   }
 
@@ -85,7 +89,9 @@
       if (!is.null(stop.chunk)) j$chunk <- k
       j
     })
-    res <- run(c(full, js))
+    res <- run(c(full, js), sprintf("%s (%s)", if (is.null(stop.chunk)) "subsamples"
+                                     else paste("chunk", k),
+                                     .lamrange(min(idx), max(idx), length(lams))))
     jl  <- rbind(jl, attr(res, "jobs"))
     err <- attr(res, "errors")
     if (length(full)) {
@@ -120,6 +126,8 @@
       }
     }
   }
+  tick(finish=TRUE, msg=if (done < last)
+         sprintf("stopped at lambda %d of %d (%s)", done, length(lams), reason) else "done")
   list(fullmodel=fullmodel, paths=paths[alive], n=sum(alive), cut=done,
        reason=reason, crossing=cross, full.failed=m, nlams=length(lams),
        chunk=if (is.null(stop.chunk)) NULL else as.integer(stop.chunk),

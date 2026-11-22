@@ -20,10 +20,16 @@
 ## are loaded instead of run, and each job is saved as it finishes. The
 ## result's "jobs" attribute is the record of the jobs (see .jobrow), which
 ## with run.dir is also appended to run.dir/jobs.csv as each job finishes.
-## Progress is reported through progressr, when it is installed.
+## Progress goes to `tick` (see .ticker), one step per lambda fitted, with
+## `phase` naming this set of jobs.
 #' @keywords internal
 .execjobs <- function(jobs, data, fun, fargs, backend="local", ncores=1,
-                      pass.errors=TRUE, run.dir=NULL) {
+                      pass.errors=TRUE, run.dir=NULL, tick=NULL, phase=NULL) {
+  step <- if (is.null(tick)) NULL else function(spec, status)
+            tick(length(.joblambda(spec, fargs)),
+                 ## the full-data fit is on the whole path, whatever the phase
+                 paste0(if (length(phase) && !identical(spec$kind, "full")) paste0(phase, ": "),
+                        .joblabel(spec), " ", status))
   out  <- vector("list", length(jobs))
   rows <- vector("list", length(jobs))
   warn <- NULL
@@ -35,23 +41,24 @@
       out[[i]]  <- saved[[i]]$value
       rows[[i]] <- .jobrow(jobs[[i]], fargs, "loaded", saved[[i]]$info, out[[i]])
       .joblog(run.dir, rows[[i]])
+      if (!is.null(step)) step(jobs[[i]], "loaded")
     }
   }
   if (any(todo)) {
-    ## progressr's progressor belongs to the function that creates it
-    prog <- if (requireNamespace("progressr", quietly=TRUE))
-              progressr::progressor(steps=sum(todo)) else NULL
     if (identical(backend, "future")) {
-      res <- .futurejobs(jobs[todo], data, fun, fargs, run.dir, prog)
+      res <- .futurejobs(jobs[todo], data, fun, fargs, run.dir, step)
     } else {
       efun <- .estfun(data, fun, run.dir)
-      if (!is.null(prog) && ncores <= 1) {
+      if (!is.null(step) && ncores <= 1) {
         ef <- efun
-        efun <- function(spec, fargs) { r <- ef(spec, fargs) ; prog(.joblabel(spec)) ; r }
+        efun <- function(spec, fargs) { r <- ef(spec, fargs) ; step(spec, "done") ; r }
       }
       res <- .try_mclapply(jobs[todo], efun, fargs = fargs, mc.cores = ncores,
                            mc.preschedule = FALSE, collect = FALSE)
-      if (!is.null(prog) && ncores > 1) for (j in jobs[todo]) prog(.joblabel(j))
+      ## PSOCK results all come back at the end
+      if (!is.null(step) && ncores > 1)
+        for (k in seq_along(res$out))
+          step(jobs[todo][[k]], if (inherits(res$out[[k]], "try-error")) "failed" else "done")
     }
     for (k in seq_along(res$out)) {
       i <- which(todo)[k] ; r <- res$out[[k]]
@@ -107,7 +114,7 @@
 ## PSOCK cluster; warnings are relayed as in a serial run. Returns the raw
 ## (timed) results and warnings, for .execjobs to check.
 #' @keywords internal
-.futurejobs <- function(jobs, data, fun, fargs, run.dir=NULL, prog=NULL) {
+.futurejobs <- function(jobs, data, fun, fargs, run.dir=NULL, step=NULL) {
   run_job <- .run_job ; time_job <- .timejob
   fs <- vector("list", length(jobs))
   ## on an error or interrupt, cancel the jobs still running
@@ -146,11 +153,34 @@
         .cksave(run.dir, jobs[[i]], r$value, .joblambda(jobs[[i]], fargs), .jobinfo(r))
         .joblog(run.dir, .jobrow(jobs[[i]], fargs, "done", r, r$value))
       }
-      if (!is.null(prog)) prog(.joblabel(jobs[[i]]))
+      if (!is.null(step))
+        step(jobs[[i]], if (inherits(r, "try-error")) "failed" else "done")
     }
     collected[done] <- TRUE
     pending <- setdiff(pending, done)
     if (length(pending) && !length(done)) Sys.sleep(0.05)
   }
   list(out=out, warn=warn)
+}
+
+## Progress of a run, in lambdas fitted: `total` counts every job on the whole
+## path, and work that is skipped (bounded StARS, early stopping, dropped jobs)
+## is credited with a message saying why, so the bar ends at 100%. `prog` is
+## a progressr progressor, or NULL (no progress reported).
+#' @keywords internal
+.ticker <- function(prog, total) {
+  done <- 0
+  function(amount=0, msg=NULL, finish=FALSE) {
+    if (finish) amount <- total - done
+    amount <- max(0, min(amount, total - done))
+    done <<- done + amount
+    if (!is.null(prog)) prog(message=msg, amount=amount)
+    invisible(done)
+  }
+}
+
+#' @keywords internal
+.lamrange <- function(from, to, of) {
+  if (from == to) sprintf("lambda %d of %d", from, of)
+  else sprintf("lambdas %d-%d of %d", from, to, of)
 }
