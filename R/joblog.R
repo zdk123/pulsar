@@ -42,7 +42,7 @@
 
 #' @keywords internal
 .joblabel <- function(spec) {
-  paste0("job ", spec$id, if (!is.null(spec$chunk)) paste0(" chunk ", spec$chunk))
+  if (identical(spec$kind, "full")) "full-data fit" else paste("subsample", spec$id)
 }
 
 #' @keywords internal

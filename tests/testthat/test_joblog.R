@@ -86,22 +86,45 @@ test_that("failed jobs are recorded with their error", {
   expect_equal(sum(csv$status == "error"), sum(j$status == "error"))
 })
 
-test_that("progress is reported through progressr as jobs finish", {
+test_that("progress is one bar per run, in lambdas fitted, with grouped messages", {
   skip_if_not_installed("progressr")
   ## progressr is off in non-interactive sessions unless enabled
   oopt <- options(progressr.enable=TRUE)
   on.exit(options(oopt), add=TRUE)
-  count <- function(expr) {
-    k <- 0L
-    h <- progressr::make_progression_handler("count", reporter=list(
-           update=function(config, state, progression, ...)
-             if (progression$amount > 0) k <<- k + 1L))
+  watch <- function(expr) {
+    rec <- new.env() ; rec$bars <- 0L ; rec$amount <- 0 ; rec$msgs <- character(0)
+    h <- progressr::make_progression_handler("watch", reporter=list(
+           initiate=function(config, state, progression, ...) {
+             rec$bars <- rec$bars + 1L ; rec$steps <- config$max_steps },
+           update=function(config, state, progression, ...) {
+             rec$amount <- rec$amount + progression$amount
+             if (length(progression$message)) rec$msgs <- c(rec$msgs, progression$message) }))
     progressr::with_progress(expr, handlers=h)
-    k
+    as.list(rec)
   }
-  expect_equal(count(go()), 5L)
+  w <- watch(go())
+  expect_equal(w$bars, 1L)
+  expect_equal(w$steps, 6 * 5)
+  expect_equal(w$amount, 6 * 5)
+  expect_true(all(c("full-data fit done", "subsample 4 done") %in% w$msgs))
+  ## bounded StARS: the stages are named, and the skipped fits are credited
+  w <- watch(go(lb.stars=TRUE, ub.stars=TRUE))
+  expect_equal(c(w$bars, w$amount), c(1, 6 * 5))
+  expect_true(any(grepl("^stage 1 \\(bounds, lambdas 1-6 of 6\\): subsample 2 done$", w$msgs)))
+  expect_true(any(grepl("^stage 2 \\(lambdas? [0-9-]+ of 6\\): subsample 3 done$", w$msgs)))
+  expect_true(any(grepl("^bounds: .*skipping", w$msgs)))
+  ## early stopping: chunks are named, and the bar ends where the run stopped
+  w <- watch(go(stop.chunk=2, thresh=.2))
+  expect_equal(c(w$bars, w$amount), c(1, 6 * 5))
+  expect_true(any(grepl("^chunk 1 \\(lambdas 1-2 of 6\\): subsample 1 done$", w$msgs)))
+  expect_true(tail(w$msgs, 1) == "done" || grepl("^stopped at lambda", tail(w$msgs, 1)))
+  ## resumed jobs and future backends advance the bar too
+  rd <- tempfile() ; go(run.dir=rd)
+  w <- suppressMessages(watch(go(run.dir=rd)))
+  expect_true("subsample 1 loaded" %in% w$msgs)
   skip_if_not_installed("future")
   oplan <- future::plan(future::sequential)
   on.exit(future::plan(oplan), add=TRUE)
-  expect_equal(count(go(backend="future")), 5L)
+  w <- watch(go(backend="future"))
+  expect_equal(c(w$bars, w$amount), c(1, 6 * 5))
 })
