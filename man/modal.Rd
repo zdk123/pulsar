@@ -5,8 +5,10 @@
 \title{Modal futures}
 \usage{
 modal(
-  packages = "huge",
+  install = "huge",
+  install.local = NULL,
   apt = "libglpk-dev",
+  secrets = NULL,
   cpu = 1,
   memory = 2048,
   timeout = 3600,
@@ -15,6 +17,9 @@ modal(
   source = NULL,
   ref = NULL,
   r.version = "4.6.2",
+  image = NULL,
+  dockerfile = NULL,
+  rebuild = FALSE,
   app = "pulsar",
   python = NULL,
   verbose = FALSE,
@@ -23,9 +28,13 @@ modal(
 )
 }
 \arguments{
-\item{packages}{R packages to install on the workers, from CRAN (Posit Package Manager binaries)}
+\item{install}{packages to install on the workers.(The name isn't \code{packages}, which \code{plan()} reserves for \code{future()}.) Each is a CRAN package name (installed from Posit Package Manager binaries), \code{"bioc::name"} for Bioconductor, or \code{"owner/repo@ref"} (also \code{"owner/repo/subdir@ref"}) for GitHub, installed with \pkg{remotes} along with their CRAN dependencies. A private GitHub repository needs a token: put \code{GITHUB_PAT} in a Modal secret and name it in \code{secrets}.}
+
+\item{install.local}{paths to local R package source directories (such as your own unpublished packages) to install on the workers, with their CRAN dependencies. They are installed in dependency order, after pulsar and the GitHub packages, and each worker checks it has the version in the directory's \code{DESCRIPTION}.}
 
 \item{apt}{system libraries to install on the workers with \code{apt-get} (the default, \code{libglpk-dev}, is needed by \pkg{igraph}, which \pkg{huge} imports)}
+
+\item{secrets}{names of \href{https://modal.com/docs/guide/secrets}{Modal secrets} whose environment variables are available while packages are installed (for example one holding \code{GITHUB_PAT}). They are not passed to the futures.}
 
 \item{cpu}{number of CPU cores per future}
 
@@ -43,6 +52,12 @@ modal(
 
 \item{r.version}{the \code{rocker/r-ver} image tag}
 
+\item{image}{a container image with R (and \code{Rscript}) to start from, instead of \code{rocker/r-ver:<r.version>}}
+
+\item{dockerfile}{path to a Dockerfile building such an image, instead of \code{image}}
+
+\item{rebuild}{rebuild the worker image from scratch (for example to pick up new commits on a GitHub branch)}
+
 \item{app}{name of the Modal app}
 
 \item{python}{path to a Python with the \code{modal} package. By default, the \code{PULSAR_MODAL_PYTHON} environment variable, else the Python that runs the \code{modal} command line tool.}
@@ -59,14 +74,17 @@ A \pkg{future} backend that evaluates each future in its own container on \href{
 \details{
 Requirements on the controlling machine: the \pkg{future} and \pkg{processx} packages, the \code{modal} Python package (\code{pip install modal}, or \code{uv tool install modal}), and a Modal token, set up once with \code{modal setup} (or the \code{MODAL_TOKEN_ID} and \code{MODAL_TOKEN_SECRET} environment variables). pulsar never reads or stores the token.
 
-Workers run a \code{rocker/r-ver} image with \pkg{future}, pulsar and the R packages in \code{packages}. The image is built on first use and cached by Modal, so later sessions with the same settings start quickly. pulsar on the workers is built from \code{source}, a local package directory, or installed from GitHub at \code{ref}; with neither, the commit the controller's pulsar was installed from (with \code{remotes::install_github}) is used, and the worker checks that its pulsar version matches the controller's.
+Workers run a \code{rocker/r-ver} image (or \code{image} / \code{dockerfile}) with \pkg{future}, pulsar, and the packages that \code{fun} needs: those in \code{install}, from CRAN, Bioconductor or GitHub, and the local package directories in \code{install.local}. The image is built on first use and cached by Modal, so later sessions with the same settings start quickly. Changing a file in an \code{install.local} package rebuilds the image from that package on. A GitHub branch is cached at its first build: pin a commit (\code{"owner/repo@<sha>"}), or set \code{rebuild=TRUE} to pick up new commits. pulsar on the workers is built from \code{source}, a local package directory, or installed from GitHub at \code{ref}; with neither, the commit the controller's pulsar was installed from (with \code{remotes::install_github}) is used, and the worker checks that its pulsar version matches the controller's.
 
 The first future starts a helper process that opens an ephemeral Modal app; it is stopped by \code{plan()} changing to another backend, or when R exits. A future whose container fails (lost worker, timeout, out of memory) is retried up to \code{retries} times, then raises a \code{FutureError}; an error raised by the future's own code is returned as usual.
 }
 \examples{
 \dontrun{
 ## requires a Modal account and the modal Python package
-future::plan(pulsar::modal, packages="huge", cpu=1, memory=1024)
+future::plan(pulsar::modal, install=c("huge", "bioc::SpiecEasi"), cpu=1, memory=1024)
+## your own package, and a private GitHub one (with a Modal secret holding GITHUB_PAT)
+future::plan(pulsar::modal, install=c("huge", "me/privatepkg@<sha>"),
+             install.local="~/src/mypkg", secrets="github")
 p <- 40 ; dat <- MASS::mvrnorm(100, rep(0, p), diag(p))
 lams <- getLamPath(getMaxCov(dat), .05, 10)
 out <- pulsar(dat, fun=huge::huge, fargs=list(lambda=lams), rep.num=50,
