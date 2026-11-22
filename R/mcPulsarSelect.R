@@ -163,6 +163,7 @@
 #'}
 #' and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut (\code{merge} is \code{NULL} there).
 #' @return call: the original function call
+#' @return The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish; turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
 #' @details
 #' \strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
 #'
@@ -246,7 +247,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     es <- .stoprun(jobs, data, fun, fargs, backend, ncores, run.dir, p, thresh,
                    fail.action, fail.thresh, stop.full, stop.chunk, stop.margin)
     est <- list(stars=.stopstars(es, thresh, p, fail.action, fail.thresh))
-    return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame()))
+    return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame(), es$jobs))
   }
 
   isamp <- .stagejobs(jobs, 1L)
@@ -254,6 +255,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   ## don't pass on errors if lb.stars = TRUE
   premerge <- .execjobs(isamp, data, fun, fargs, backend, ncores,
                         pass.errors = !lb.stars, run.dir = run.dir)
+  joblog <- attr(premerge, 'jobs')
   errors <- attr(premerge, 'errors')
   # Adjust rep.num for failed jobs
   rep.num <- rep.num - ifelse(refit, sum(errors[-1]), sum(errors))
@@ -292,6 +294,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
                            function(ppm) ppm[ub.index:lb.est$opt.index])
     isamp <- .stagejobs(jobs, 2L)
     tmp <- .execjobs(isamp, data, fun, fargs, backend, ncores, run.dir = run.dir)
+    joblog <- rbind(joblog, attr(tmp, 'jobs'))
     # Adjust rep.num for failed jobs
     rep.num <- rep.num - sum(attr(tmp, 'errors'))
     premerge <- c(lb.premerge, tmp)
@@ -362,12 +365,12 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     est$stars$opt.index <- est$stars$opt.index + ub.index - 1L
   }
 
-  .pulsarout(est, fullmodel, criterion, match.call(), parent.frame())
+  .pulsarout(est, fullmodel, criterion, match.call(), parent.frame(), joblog)
 }
 
 ## Final checks and the pulsar object
 #' @keywords internal
-.pulsarout <- function(est, fullmodel, criterion, call, envir) {
+.pulsarout <- function(est, fullmodel, criterion, call, envir, jobs=NULL) {
   if ("stars" %in% criterion) {
       .failwarn(est$stars$n.failed, est$stars$n.failed + est$stars$n.fit,
                 est$stars$opt.index)
@@ -380,6 +383,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   est$call  <- call
   est$envir <- envir
   est$est   <- fullmodel
+  attr(est, "jobs") <- jobs
   return(structure(est, class="pulsar"))
 }
 

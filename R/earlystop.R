@@ -49,12 +49,14 @@
   subs <- Filter(function(j) identical(j$kind, "subsample"), jobs)
   fullmodel <- NULL
   m <- NA_integer_
+  jl <- NULL
   run <- function(js) .execjobs(js, data, fun, fargs, backend, ncores,
                                 pass.errors=TRUE, run.dir=run.dir)
 
   if (stop.full) {
     res <- .execjobs(full, data, fun, fargs, backend, ncores, pass.errors=FALSE,
                      run.dir=run.dir)
+    jl <- attr(res, "jobs")
     fullmodel <- res[[1]]
     full <- list()
     failed <- vapply(.fitpath(fullmodel), is.null, logical(1))
@@ -84,6 +86,7 @@
       j
     })
     res <- run(c(full, js))
+    jl  <- rbind(jl, attr(res, "jobs"))
     err <- attr(res, "errors")
     if (length(full)) {
       if (err[1]) stop("Fitting the full data failed", call.=FALSE)
@@ -120,7 +123,7 @@
   list(fullmodel=fullmodel, paths=paths[alive], n=sum(alive), cut=done,
        reason=reason, crossing=cross, full.failed=m, nlams=length(lams),
        chunk=if (is.null(stop.chunk)) NULL else as.integer(stop.chunk),
-       margin=as.integer(stop.margin))
+       margin=as.integer(stop.margin), jobs=jl)
 }
 
 ## The StARS result of an early-stopped run, on the whole lambda path: the
