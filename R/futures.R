@@ -4,6 +4,9 @@
 ## Modal, plan(future.batchtools::batchtools_slurm) on Slurm, or any other
 ## future backend.
 
+## `X` is each future's rows of the data, given in `globals` (.futurejobs)
+utils::globalVariables("X")
+
 #' @keywords internal
 .backendcheck <- function(backend) {
   if (!is.character(backend) || length(backend) != 1L ||
