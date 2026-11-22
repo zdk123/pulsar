@@ -17,30 +17,67 @@
 ## Run a set of jobs, returning their results in job order. Failed jobs are
 ## "try-error" strings, checked by .collectjobs (dropped with a warning when
 ## pass.errors, else the run stops). With run.dir, jobs already saved there
-## are loaded instead of run, and each job is saved as it finishes.
+## are loaded instead of run, and each job is saved as it finishes. The
+## result's "jobs" attribute is the record of the jobs (see .jobrow), which
+## with run.dir is also appended to run.dir/jobs.csv as each job finishes.
+## Progress is reported through progressr, when it is installed.
 #' @keywords internal
 .execjobs <- function(jobs, data, fun, fargs, backend="local", ncores=1,
                       pass.errors=TRUE, run.dir=NULL) {
   out  <- vector("list", length(jobs))
+  rows <- vector("list", length(jobs))
   warn <- NULL
   todo <- rep(TRUE, length(jobs))
   if (!is.null(run.dir)) {
     saved <- lapply(jobs, function(j) .ckload(run.dir, j, .joblambda(j, fargs)))
     todo  <- !vapply(saved, `[[`, logical(1), "found")
-    out[!todo] <- lapply(saved[!todo], `[[`, "value")
+    for (i in which(!todo)) {
+      out[[i]]  <- saved[[i]]$value
+      rows[[i]] <- .jobrow(jobs[[i]], fargs, "loaded", saved[[i]]$info, out[[i]])
+    }
   }
   if (any(todo)) {
-    res <- if (identical(backend, "future"))
-             .futurejobs(jobs[todo], data, fun, fargs, run.dir)
-           else
-             .try_mclapply(jobs[todo], .estfun(data, fun, run.dir), fargs = fargs,
-                           mc.cores = ncores, mc.preschedule = FALSE, collect = FALSE)
-    out[todo] <- res$out
+    ## progressr's progressor belongs to the function that creates it
+    prog <- if (requireNamespace("progressr", quietly=TRUE))
+              progressr::progressor(steps=sum(todo)) else NULL
+    if (identical(backend, "future")) {
+      res <- .futurejobs(jobs[todo], data, fun, fargs, run.dir, prog)
+    } else {
+      efun <- .estfun(data, fun, run.dir)
+      if (!is.null(prog) && ncores <= 1) {
+        ef <- efun
+        efun <- function(spec, fargs) { r <- ef(spec, fargs) ; prog(.joblabel(spec)) ; r }
+      }
+      res <- .try_mclapply(jobs[todo], efun, fargs = fargs, mc.cores = ncores,
+                           mc.preschedule = FALSE, collect = FALSE)
+      if (!is.null(prog) && ncores > 1) for (j in jobs[todo]) prog(.joblabel(j))
+    }
+    for (k in seq_along(res$out)) {
+      i <- which(todo)[k] ; r <- res$out[[k]]
+      if (inherits(r, "pulsarSaveFailed")) stop(r$message, call.=FALSE)
+      if (inherits(r, "try-error")) {
+        out[[i]]  <- r
+        rows[[i]] <- .jobrow(jobs[[i]], fargs, "error", error=as.character(r))
+        ## futures are logged as they are collected; local jobs by the worker
+        if (!identical(backend, "future")) .joblog(run.dir, rows[[i]])
+      } else {
+        out[[i]]  <- r$value
+        rows[[i]] <- .jobrow(jobs[[i]], fargs, "done", r, r$value)
+      }
+    }
     warn <- res$warn
   }
-  saveerr <- vapply(out, inherits, logical(1), what="pulsarSaveFailed")
-  if (any(saveerr)) stop(out[[which(saveerr)[1]]]$message, call.=FALSE)
-  .collectjobs(out, warn, pass.errors)
+  out <- .collectjobs(out, warn, pass.errors)
+  attr(out, "jobs") <- do.call(rbind, rows)
+  out
+}
+
+## Run one job and time it: list(value, start, end, host)
+#' @keywords internal
+.timejob <- function(run_job, spec, data, fun, fargs) {
+  start <- Sys.time()
+  value <- run_job(spec, data, fun, fargs)
+  list(value=value, start=start, end=Sys.time(), host=Sys.info()[["nodename"]])
 }
 
 ## The function a local (serial / PSOCK) worker runs for one job. Built here
@@ -49,12 +86,15 @@
 .estfun <- function(data, fun, run.dir) {
   force(data) ; force(fun) ; force(run.dir)
   function(spec, fargs) {
-    value <- .run_job(spec, data, fun, fargs)
+    r <- .timejob(.run_job, spec, data, fun, fargs)
     ## a failed save must not look like a failed fit (PSOCK workers turn
     ## errors into failed jobs), so it comes back as a marker
-    tryCatch(.cksave(run.dir, spec, value, .joblambda(spec, fargs)),
-             pulsarSaveError=function(e)
-               structure(list(message=conditionMessage(e)), class="pulsarSaveFailed"))
+    tryCatch({
+      .cksave(run.dir, spec, r$value, .joblambda(spec, fargs), .jobinfo(r))
+      .joblog(run.dir, .jobrow(spec, fargs, "done", r, r$value))
+      r
+    }, pulsarSaveError=function(e)
+         structure(list(message=conditionMessage(e)), class="pulsarSaveFailed"))
   }
 }
 
@@ -62,10 +102,10 @@
 ## results are collected as they finish and returned in job order. Errors,
 ## from `fun` or from the backend (a lost worker), become failed jobs, as on a
 ## PSOCK cluster; warnings are relayed as in a serial run. Returns the raw
-## results and warnings, for .execjobs to check.
+## (timed) results and warnings, for .execjobs to check.
 #' @keywords internal
-.futurejobs <- function(jobs, data, fun, fargs, run.dir=NULL) {
-  run_job <- .run_job
+.futurejobs <- function(jobs, data, fun, fargs, run.dir=NULL, prog=NULL) {
+  run_job <- .run_job ; time_job <- .timejob
   fs <- vector("list", length(jobs))
   ## on an error or interrupt, cancel the jobs still running
   collected <- logical(length(jobs))
@@ -76,12 +116,11 @@
     rows <- spec$rows
     spec$rows <- seq_along(rows)
     ## seed=NULL: no seed and no RNG check, as with backend="local"
-    fs[[i]] <- future::future(run_job(spec, X, fun, fargs),
-                   globals=list(run_job=run_job, spec=spec,
+    fs[[i]] <- future::future(time_job(run_job, spec, X, fun, fargs),
+                   globals=list(time_job=time_job, run_job=run_job, spec=spec,
                                 X=data[rows, , drop=FALSE], fun=fun, fargs=fargs),
                    packages="pulsar", seed=NULL, lazy=FALSE,
-                   label=sprintf("pulsar-job-%d%s", spec$id,
-                                 if (is.null(spec$chunk)) "" else sprintf("-chunk-%d", spec$chunk)))
+                   label=sprintf("pulsar-%s", gsub(" ", "-", .joblabel(spec))))
   }
 
   out  <- vector("list", length(fs))
@@ -97,7 +136,14 @@
           warn <<- c(warn, conditionMessage(w))
           invokeRestart("muffleWarning")
         })
-      .cksave(run.dir, jobs[[i]], out[[i]], .joblambda(jobs[[i]], fargs))
+      r <- out[[i]]
+      if (inherits(r, "try-error")) {
+        .joblog(run.dir, .jobrow(jobs[[i]], fargs, "error", error=as.character(r)))
+      } else {
+        .cksave(run.dir, jobs[[i]], r$value, .joblambda(jobs[[i]], fargs), .jobinfo(r))
+        .joblog(run.dir, .jobrow(jobs[[i]], fargs, "done", r, r$value))
+      }
+      if (!is.null(prog)) prog(.joblabel(jobs[[i]]))
     }
     collected[done] <- TRUE
     pending <- setdiff(pending, done)

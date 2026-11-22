@@ -91,6 +91,8 @@ With early stopping (\code{stop.full} or \code{stop.chunk}), \code{stars} also h
 and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut (\code{merge} is \code{NULL} there).
 
 call: the original function call
+
+The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish; turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
 }
 \description{
 Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.

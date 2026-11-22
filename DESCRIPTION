@@ -15,6 +15,7 @@ Suggests:
     fs (>= 1.2.2),
     future (>= 1.40.0),
     processx,
+    progressr,
     checkmate (>= 1.8.5),
     orca,
     huge (>= 1.5),

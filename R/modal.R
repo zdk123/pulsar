@@ -35,6 +35,7 @@
 #' @param app name of the Modal app. Several R sessions can use the same name at once; when they start together, Modal's limit on how fast apps are created can refuse some, and those wait and retry (for up to a few minutes)
 #' @param python path to a Python with the \code{modal} package. By default, the \code{PULSAR_MODAL_PYTHON} environment variable, else the Python that runs the \code{modal} command line tool.
 #' @param verbose show Modal's progress output (image builds, container logs)
+#' @param log.dir \code{NULL} (the default), or a directory to keep the helper process's log in: Modal's output (image builds, container logs, retries) goes to a new file there each time a helper starts (\code{modal-helper-<time>-<pid>.log}), and is kept after the helper stops. A run's \code{run.dir} is a good place. Without it the log is in a temporary directory, deleted when the helper stops (its end is shown if the helper fails). Ignored with \code{verbose = TRUE}, which prints the output instead.
 #' @param envir unused
 #' @param \dots further arguments for \code{\link[future]{FutureBackend}}
 #' @seealso \code{\link{pulsar}}, \code{\link[future]{plan}}
@@ -56,7 +57,7 @@ modal <- function(install="huge", install.local=NULL, apt="libglpk-dev", secrets
                   cpu=1, memory=2048, timeout=3600, retries=0L, workers=100L,
                   source=NULL, ref=NULL, r.version="4.6.2", image=NULL,
                   dockerfile=NULL, rebuild=FALSE, app="pulsar", python=NULL,
-                  verbose=FALSE, ..., envir=parent.frame()) {
+                  verbose=FALSE, log.dir=NULL, ..., envir=parent.frame()) {
   stop("INTERNAL ERROR: pulsar::modal() is a future plan; use future::plan(pulsar::modal)")
 }
 class(modal) <- c("modal", "multiprocess", "future", "function")
@@ -69,13 +70,17 @@ ModalFutureBackend <- function(install="huge", install.local=NULL, apt="libglpk-
                                retries=0L, workers=100L, source=NULL, ref=NULL,
                                r.version="4.6.2", image=NULL, dockerfile=NULL,
                                rebuild=FALSE, app="pulsar", python=NULL,
-                               verbose=FALSE, ..., envir=NULL) {
+                               verbose=FALSE, log.dir=NULL, ..., envir=NULL) {
   if (!is.null(source)) {
     source <- normalizePath(source, mustWork=TRUE)
     if (!file.exists(file.path(source, "DESCRIPTION")))
       stop("modal: source must be a pulsar package directory", call.=FALSE)
   }
   if (!is.null(dockerfile)) dockerfile <- normalizePath(dockerfile, mustWork=TRUE)
+  if (!is.null(log.dir)) {
+    dir.create(log.dir, recursive=TRUE, showWarnings=FALSE)
+    log.dir <- normalizePath(log.dir, mustWork=TRUE)
+  }
   if (length(secrets) && !all(grepl("^[A-Za-z0-9][A-Za-z0-9_.-]*$", secrets)))
     stop("modal: secret names may only use letters, digits, '_', '.' and '-'", call.=FALSE)
   if (!is.null(ref) && (!grepl(.SPEC_REF, ref) || grepl("..", ref, fixed=TRUE)))
@@ -86,7 +91,7 @@ ModalFutureBackend <- function(install="huge", install.local=NULL, apt="libglpk-
                    retries=as.integer(retries), workers=as.integer(workers),
                    source=source, ref=ref, r.version=r.version, image=image,
                    dockerfile=dockerfile, rebuild=isTRUE(rebuild), app=app,
-                   python=python, verbose=verbose)
+                   python=python, verbose=verbose, log.dir=log.dir)
   core <- future::FutureBackend(reg=paste0("workers-modal-", .modalkey(settings)),
                                 workers=as.integer(workers), modal=settings, ...,
                                 timeout=getOption("future.wait.timeout", 30*24*60*60),
@@ -417,7 +422,9 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
 
   dir <- tempfile("pulsar-modal-") ; dir.create(dir)
   cmd <- .modalhelper(settings)
-  log <- file.path(dir, "helper.log")
+  log <- if (is.null(settings$log.dir)) file.path(dir, "helper.log")
+         else file.path(settings$log.dir, sprintf("modal-helper-%s-%d.log",
+                          format(Sys.time(), "%Y%m%d-%H%M%S"), Sys.getpid()))
   proc <- processx::process$new(cmd[1], cmd[-1], stdin="|", stdout="|",
             stderr=if (isTRUE(settings$verbose)) "" else log,
             env=c("current", .modalenv(settings)), cleanup=TRUE)
