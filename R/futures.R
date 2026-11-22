@@ -34,6 +34,7 @@
     for (i in which(!todo)) {
       out[[i]]  <- saved[[i]]$value
       rows[[i]] <- .jobrow(jobs[[i]], fargs, "loaded", saved[[i]]$info, out[[i]])
+      .joblog(run.dir, rows[[i]])
     }
   }
   if (any(todo)) {
@@ -58,8 +59,6 @@
       if (inherits(r, "try-error")) {
         out[[i]]  <- r
         rows[[i]] <- .jobrow(jobs[[i]], fargs, "error", error=as.character(r))
-        ## futures are logged as they are collected; local jobs by the worker
-        if (!identical(backend, "future")) .joblog(run.dir, rows[[i]])
       } else {
         out[[i]]  <- r$value
         rows[[i]] <- .jobrow(jobs[[i]], fargs, "done", r, r$value)
@@ -86,7 +85,11 @@
 .estfun <- function(data, fun, run.dir) {
   force(data) ; force(fun) ; force(run.dir)
   function(spec, fargs) {
-    r <- .timejob(.run_job, spec, data, fun, fargs)
+    ## an error is logged here, then goes on (a serial run stops; a PSOCK
+    ## worker returns it as a failed job)
+    r <- withCallingHandlers(.timejob(.run_job, spec, data, fun, fargs),
+           error=function(e) .joblog(run.dir, .jobrow(spec, fargs, "error",
+                                                      error=conditionMessage(e))))
     ## a failed save must not look like a failed fit (PSOCK workers turn
     ## errors into failed jobs), so it comes back as a marker
     tryCatch({

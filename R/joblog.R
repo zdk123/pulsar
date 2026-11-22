@@ -1,7 +1,7 @@
 ## The record of a run's jobs: one row per job (per chunk, with early
 ## stopping), kept as the "jobs" attribute of a pulsar result (see getJobs)
-## and, with run.dir, appended to run.dir/jobs.csv as each job finishes, so
-## it outlives a session that dies mid-run.
+## and, with run.dir, appended to run.dir/jobs.csv as each job finishes (and
+## as each saved job is loaded), so it outlives a session that dies mid-run.
 ##
 ##   id, kind, stage, chunk  the job (see jobs.R)
 ##   n.lambda, lambda.max, lambda.min
@@ -73,7 +73,7 @@
 
 #' The record of a pulsar run's jobs
 #'
-#' Each pulsar run is a set of jobs: the fit on the full data, and one fit per subsample (per chunk of lambdas, with early stopping). \code{getJobs} gives a record of them, for checking where the time went and which jobs failed. With \code{run.dir}, the same record is appended to \code{jobs.csv} in \code{run.dir} as each job finishes, so it is kept even if the session dies mid-run (with times in UTC).
+#' Each pulsar run is a set of jobs: the fit on the full data, and one fit per subsample (per chunk of lambdas, with early stopping). \code{getJobs} gives a record of them, for checking where the time went and which jobs failed. With \code{run.dir}, the same record is appended to \code{jobs.csv} in \code{run.dir} as each job finishes, so it is kept even if the session dies mid-run (with times in UTC, and line breaks in error messages replaced by spaces). Each call of \code{pulsar} appends its own rows, including \code{"loaded"} rows for the jobs a resumed run reuses, and an \code{"error"} row for a job whose error stopped a serial run (which \code{getJobs} can't show, as there is no result).
 #'
 #' @param x a \code{pulsar} object
 #' @return a data frame with one row per job, or \code{NULL} for a \code{batch.pulsar} object. The columns are:

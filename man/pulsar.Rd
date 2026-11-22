@@ -92,7 +92,7 @@ and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut 
 
 call: the original function call
 
-The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish; turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
+The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish (with \code{ncores > 1}, all at the end); turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
 }
 \description{
 Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
