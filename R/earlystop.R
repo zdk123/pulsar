@@ -142,6 +142,7 @@
                         fail.action=fail.action, fail.thresh=fail.thresh)
   rest <- es$nlams - es$cut
   st$summary  <- c(st$summary, rep(NA_real_, rest))
+  st$summary.raw <- c(st$summary.raw, rep(NA_real_, rest))
   st$merge    <- c(st$merge, vector("list", rest))
   st$n.failed <- c(st$n.failed, rep(NA_real_, rest))
   st$n.fit    <- c(st$n.fit, rep(NA_real_, rest))

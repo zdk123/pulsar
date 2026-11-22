@@ -82,6 +82,7 @@ If \code{stars} is included as a criterion then additional arguments include
    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
    \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
+   \item summary.raw: the StARS statistic at each lambda before it is made monotone (\code{summary} is its running maximum, over the lambdas fitted together: with \code{lb.stars}, the path between the bounds), \code{NA} where no subsample fit succeeded
 }
 With early stopping (\code{stop.full} or \code{stop.chunk}), \code{stars} also has
 \itemize{
