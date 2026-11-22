@@ -47,7 +47,10 @@ test_that("stopping at the crossing gives the whole path's pick, fitting fewer l
     info <- sprintf("chunk %d, margin %d", chunk, margin)
     same_pick(ref, out)
     cut <- out$stars$stop$index
-    expect_identical(cut, as.integer(min(cross + margin, length(lams))), info=info)
+    ## chunks are whole until the crossing is seen, then end at cross + margin
+    L <- length(lams)
+    seen <- min(L, ceiling(cross / chunk) * chunk)
+    expect_identical(cut, as.integer(max(seen, min(cross + margin, L))), info=info)
     expect_identical(out$stars$stop$reason, "crossing", info=info)
     expect_identical(out$stars$stop$crossing, cross, info=info)
     expect_true(all(is.na(out$stars$summary[-seq_len(cut)])), info=info)
@@ -106,9 +109,11 @@ test_that("a subsample that errors in a later chunk is dropped at every lambda",
   skip_if_not_installed("future")
   oplan <- future::plan(future::sequential)
   on.exit(future::plan(oplan))
-  bm <- function(data, lambda) nrow(data) < n && data[1, 1] > 0 && lambda[1] < lams[3]
+  ## errors after the first chunk; margin 2 makes sure a second chunk runs
+  bm <- function(data, lambda) nrow(data) < n && data[1, 1] > 0 && !(lams[1] %in% lambda)
   ref <- go(coldfun(boom=function(data, lambda) nrow(data) < n && data[1, 1] > 0), backend="future")
-  out <- go(coldfun(boom=bm), stop.chunk=2, stop.margin=0, backend="future")
+  out <- go(coldfun(boom=bm), stop.chunk=2, stop.margin=2, backend="future")
+  expect_true(out$stars$stop$index > 2)
   same_pick(ref, out)
   expect_true(all(out$stars$n.run[out$stars$n.run > 0] < 8))
 })
