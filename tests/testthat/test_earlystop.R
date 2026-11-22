@@ -53,6 +53,7 @@ test_that("stopping at the crossing gives the whole path's pick, fitting fewer l
     expect_true(all(is.na(out$stars$summary[-seq_len(cut)])), info=info)
     expect_equal(out$stars$n.run, c(rep(8, cut), rep(0, length(lams) - cut)), info=info)
     expect_identical(out$est, ref$est, info=info)
+    expect_output(print(out), sprintf("fitted to index %d \\(crossing\\)", cut))
     expect_equal(nfits(cf), length(lams) + 8 * cut, info=info)
   }
   expect_equal(full, length(lams) * 9)
