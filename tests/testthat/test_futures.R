@@ -391,4 +391,7 @@ test_that("log.dir keeps the Modal helper's log, and lost containers are recorde
     expect_match(j$error[j$status == "error"], "container lost")
   })
   expect_length(list.files(ld, "^modal-helper-.*\\.log$"), 1L)
+  ## log.dir doesn't change which helper (and worker image) the settings use
+  s <- pulsar:::ModalFutureBackend(ref="test")$modal
+  expect_identical(pulsar:::.modalkey(`[[<-`(s, "log.dir", ld)), pulsar:::.modalkey(s))
 })

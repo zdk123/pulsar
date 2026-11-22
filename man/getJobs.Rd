@@ -24,7 +24,7 @@ a data frame with one row per job, or \code{NULL} for a \code{batch.pulsar} obje
 }
 }
 \description{
-Each pulsar run is a set of jobs: the fit on the full data, and one fit per subsample (per chunk of lambdas, with early stopping). \code{getJobs} gives a record of them, for checking where the time went and which jobs failed. With \code{run.dir}, the same record is appended to \code{jobs.csv} in \code{run.dir} as each job finishes, so it is kept even if the session dies mid-run (with times in UTC).
+Each pulsar run is a set of jobs: the fit on the full data, and one fit per subsample (per chunk of lambdas, with early stopping). \code{getJobs} gives a record of them, for checking where the time went and which jobs failed. With \code{run.dir}, the same record is appended to \code{jobs.csv} in \code{run.dir} as each job finishes, so it is kept even if the session dies mid-run (with times in UTC, and line breaks in error messages replaced by spaces). Each call of \code{pulsar} appends its own rows, including \code{"loaded"} rows for the jobs a resumed run reuses, and an \code{"error"} row for a job whose error stopped a serial run (which \code{getJobs} can't show, as there is no result).
 }
 \seealso{
 \code{\link{pulsar}}
