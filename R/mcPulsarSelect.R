@@ -155,6 +155,7 @@
 #'    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
 #'    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed
 #'    \item n.fit: the number of successful subsample fits at each lambda (the denominator of the selection frequencies in \code{merge})
+#'    \item summary.raw: the StARS statistic at each lambda before it is made monotone (\code{summary} is its running maximum, over the lambdas fitted together: with \code{lb.stars}, the path between the bounds), \code{NA} where no subsample fit succeeded
 #'}
 #' With early stopping (\code{stop.full} or \code{stop.chunk}), \code{stars} also has
 #' \itemize{
@@ -363,6 +364,9 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     tmpsumm[pinv] <- lb.est$summary[pinv]
     tmpsumm[pind] <- est$stars$summary
     est$stars$summary   <- tmpsumm
+    tmpraw <- lb.est$summary.raw
+    tmpraw[pind] <- est$stars$summary.raw
+    est$stars$summary.raw <- tmpraw
 
     tmpmerg <- vector('list', length(lb.est$summary))
     tmpmerg[pinv]   <- lb.est$merge[pinv]
@@ -458,6 +462,8 @@ stars.stability <- function(premerge, stars.thresh, rep.num, p, merge=NULL,
       est$merge[[i]] <- est$merge[[i]]/n.fit[i]
       est$summary[i] <- 4 * sum(est$merge[[i]] * (1 - est$merge[[i]])) / (p * (p - 1))
     }
+    ## before monotonizing; NA where no fit is usable (summary uses 0 there)
+    est$summary.raw <- ifelse(ok, est$summary, NA_real_)
     if (any(!ok))
       warning(sprintf("All subsample fits failed at lambda index %s",
                       paste(which(!ok), collapse=", ")), call.=FALSE)
