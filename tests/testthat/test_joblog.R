@@ -51,7 +51,21 @@ test_that("run.dir keeps the record in jobs.csv, and resumed jobs keep their tim
   jb <- getJobs(b)
   expect_equal(jb$status, c("loaded", "loaded", "done", "loaded", "loaded"))
   expect_equal(jb$secs[-3], getJobs(a)$secs[-3])
-  expect_equal(nrow(utils::read.csv(file.path(rd, "jobs.csv"))), 6)
+  ## each call appends its rows: the loaded ones too
+  csv <- utils::read.csv(file.path(rd, "jobs.csv"), stringsAsFactors=FALSE)
+  expect_equal(csv$status[6:10][order(csv$id[6:10])], jb$status)
+})
+
+test_that("a job whose error stops a serial run is in jobs.csv", {
+  rd <- tempfile()
+  bad <- function(data, lambda) {
+    if (nrow(data) < n) stop("solver blew up, badly")
+    huge::huge(data, lambda=lambda, verbose=FALSE)
+  }
+  expect_error(go(fun=bad, run.dir=rd), "solver blew up")
+  csv <- utils::read.csv(file.path(rd, "jobs.csv"), stringsAsFactors=FALSE)
+  expect_equal(csv$status, c("done", "error"))
+  expect_equal(csv$error[2], "solver blew up, badly")
 })
 
 test_that("failed jobs are recorded with their error", {

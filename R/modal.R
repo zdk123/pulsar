@@ -35,7 +35,7 @@
 #' @param app name of the Modal app. Several R sessions can use the same name at once; when they start together, Modal's limit on how fast apps are created can refuse some, and those wait and retry (for up to a few minutes)
 #' @param python path to a Python with the \code{modal} package. By default, the \code{PULSAR_MODAL_PYTHON} environment variable, else the Python that runs the \code{modal} command line tool.
 #' @param verbose show Modal's progress output (image builds, container logs)
-#' @param log.dir \code{NULL} (the default), or a directory to keep the helper process's log in: Modal's output (image builds, container logs, retries) goes to a new file there each time a helper starts (\code{modal-helper-<time>-<pid>.log}), and is kept after the helper stops. A run's \code{run.dir} is a good place. Without it the log is in a temporary directory, deleted when the helper stops (its end is shown if the helper fails). Ignored with \code{verbose = TRUE}, which prints the output instead.
+#' @param log.dir \code{NULL} (the default), or a directory to keep the helper process's log in: Modal's output (image builds, container logs, retries) goes to a new file there each time a helper starts (\code{modal-helper-<time>-<pid>-<random>.log}), and is kept after the helper stops. A helper already running for the same settings keeps its log file. A run's \code{run.dir} is a good place. Without it the log is in a temporary directory, deleted when the helper stops (its end is shown if the helper fails). Ignored with \code{verbose = TRUE}, which prints the output instead.
 #' @param envir unused
 #' @param \dots further arguments for \code{\link[future]{FutureBackend}}
 #' @seealso \code{\link{pulsar}}, \code{\link[future]{plan}}
@@ -120,7 +120,7 @@ attr(modal, "factory") <- ModalFutureBackend
   })
   if (!is.null(settings$dockerfile))
     stamp <- c(stamp, tools::md5sum(settings$dockerfile))
-  writeLines(c(utils::capture.output(dput(settings[setdiff(names(settings), "verbose")])),
+  writeLines(c(utils::capture.output(dput(settings[setdiff(names(settings), c("verbose", "log.dir"))])),
                unlist(stamp)), f)
   substr(unname(tools::md5sum(f)), 1, 10)
 }
@@ -423,8 +423,8 @@ tweak.modal <- function(strategy, ..., penvir=parent.frame()) {
   dir <- tempfile("pulsar-modal-") ; dir.create(dir)
   cmd <- .modalhelper(settings)
   log <- if (is.null(settings$log.dir)) file.path(dir, "helper.log")
-         else file.path(settings$log.dir, sprintf("modal-helper-%s-%d.log",
-                          format(Sys.time(), "%Y%m%d-%H%M%S"), Sys.getpid()))
+         else tempfile(sprintf("modal-helper-%s-%d-", format(Sys.time(), "%Y%m%d-%H%M%S"),
+                                Sys.getpid()), tmpdir=settings$log.dir, fileext=".log")
   proc <- processx::process$new(cmd[1], cmd[-1], stdin="|", stdout="|",
             stderr=if (isTRUE(settings$verbose)) "" else log,
             env=c("current", .modalenv(settings)), cleanup=TRUE)

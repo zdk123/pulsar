@@ -65,7 +65,7 @@ modal(
 
 \item{verbose}{show Modal's progress output (image builds, container logs)}
 
-\item{log.dir}{\code{NULL} (the default), or a directory to keep the helper process's log in: Modal's output (image builds, container logs, retries) goes to a new file there each time a helper starts (\code{modal-helper-<time>-<pid>.log}), and is kept after the helper stops. A run's \code{run.dir} is a good place. Without it the log is in a temporary directory, deleted when the helper stops (its end is shown if the helper fails). Ignored with \code{verbose = TRUE}, which prints the output instead.}
+\item{log.dir}{\code{NULL} (the default), or a directory to keep the helper process's log in: Modal's output (image builds, container logs, retries) goes to a new file there each time a helper starts (\code{modal-helper-<time>-<pid>-<random>.log}), and is kept after the helper stops. A helper already running for the same settings keeps its log file. A run's \code{run.dir} is a good place. Without it the log is in a temporary directory, deleted when the helper stops (its end is shown if the helper fails). Ignored with \code{verbose = TRUE}, which prints the output instead.}
 
 \item{\dots}{further arguments for \code{\link[future]{FutureBackend}}}
 
