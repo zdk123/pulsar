@@ -163,7 +163,7 @@
 #'}
 #' and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut (\code{merge} is \code{NULL} there).
 #' @return call: the original function call
-#' @return The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish (with \code{ncores > 1}, all at the end); turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
+#' @return The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish (with \code{ncores > 1}, all at the end), on one bar per run that counts lambdas fitted. Each update names its group of jobs (for example \code{"chunk 2 (lambdas 5-8 of 20): subsample 3 done"}), and fits that are skipped (by \code{lb.stars} or early stopping) are credited with a message saying why, so the bar ends at 100\%; turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
 #' @details
 #' \strong{Failed fits.} If the graphical model function fails on a subsample at some lambda without raising an error (e.g. the solver does not converge), \pkg{pulsar} can only leave that fit out if \code{fun} reports the failure, by returning \code{NULL} or \code{NA} for that element of \code{path}, or by returning a logical vector \code{failed} alongside \code{path} (see \code{\link{pulsar-function}}). An unreported failure that returns an empty or diagonal estimate is counted as an empty graph, which biases the edge selection frequencies toward zero, and hence the StARS (and G-StARS) instability, at that lambda. Since failures tend to happen at small lambda, where StARS selects, \code{fun} should signal non-convergence whenever it can. A warning is given when reported failures occur at, or next to, the selected lambda.
 #'
@@ -243,9 +243,15 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     jobs <- .ckopen(run.dir, key, jobs)
   }
 
+  ## one progress bar for the run (progressr: the progressor belongs to the
+  ## function that creates it)
+  prog <- if (requireNamespace("progressr", quietly=TRUE))
+            progressr::progressor(steps=nlams * length(jobs)) else NULL
+  tick <- .ticker(prog, nlams * length(jobs))
+
   if (early) {
     es <- .stoprun(jobs, data, fun, fargs, backend, ncores, run.dir, p, thresh,
-                   fail.action, fail.thresh, stop.full, stop.chunk, stop.margin)
+                   fail.action, fail.thresh, stop.full, stop.chunk, stop.margin, tick)
     est <- list(stars=.stopstars(es, thresh, p, fail.action, fail.thresh))
     return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame(), es$jobs))
   }
@@ -254,7 +260,9 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   minN  <- length(isamp)
   ## don't pass on errors if lb.stars = TRUE
   premerge <- .execjobs(isamp, data, fun, fargs, backend, ncores,
-                        pass.errors = !lb.stars, run.dir = run.dir)
+                        pass.errors = !lb.stars, run.dir = run.dir, tick = tick,
+                        phase = if (lb.stars) sprintf("stage 1 (bounds, %s)",
+                                                      .lamrange(1, nlams, nlams)))
   joblog <- attr(premerge, 'jobs')
   errors <- attr(premerge, 'errors')
   # Adjust rep.num for failed jobs
@@ -293,13 +301,20 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
     lb.premerge  <- lapply(lb.premerge,
                            function(ppm) ppm[ub.index:lb.est$opt.index])
     isamp <- .stagejobs(jobs, 2L)
-    tmp <- .execjobs(isamp, data, fun, fargs, backend, ncores, run.dir = run.dir)
+    nfull <- length(lb.est$summary)
+    tick((nfull - nlams) * length(isamp),
+         sprintf("bounds: %s, skipping %d fits", .lamrange(ub.index, lb.est$opt.index, nfull),
+                 (nfull - nlams) * length(isamp)))
+    tmp <- .execjobs(isamp, data, fun, fargs, backend, ncores, run.dir = run.dir,
+                     tick = tick, phase = sprintf("stage 2 (%s)",
+                                       .lamrange(ub.index, lb.est$opt.index, nfull)))
     joblog <- rbind(joblog, attr(tmp, 'jobs'))
     # Adjust rep.num for failed jobs
     rep.num <- rep.num - sum(attr(tmp, 'errors'))
     premerge <- c(lb.premerge, tmp)
   }
 
+  tick(finish=TRUE, msg="done")
   premerge.reord <- .tlist(premerge, nlams, rep.num)
   rm(premerge) ; gc()
   est <- list()

@@ -92,7 +92,7 @@ and \code{summary}, \code{n.failed} and \code{n.fit} are \code{NA} past the cut 
 
 call: the original function call
 
-The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish (with \code{ncores > 1}, all at the end); turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
+The record of the run's jobs (timing, failures, where they ran) is kept with the result: see \code{\link{getJobs}}. With \code{progressr} installed, progress is reported as jobs finish (with \code{ncores > 1}, all at the end), on one bar per run that counts lambdas fitted. Each update names its group of jobs (for example \code{"chunk 2 (lambdas 5-8 of 20): subsample 3 done"}), and fits that are skipped (by \code{lb.stars} or early stopping) are credited with a message saying why, so the bar ends at 100\%; turn it on with \code{progressr::handlers(global=TRUE)}, or wrap the call in \code{progressr::with_progress()}. progressr reports nothing in a non-interactive session (such as \code{Rscript}) unless \code{options(progressr.enable=TRUE)} is set.
 }
 \description{
 Run pulsar using StARS' edge stability (or other criteria) to select an undirected graphical model over a lambda path.
