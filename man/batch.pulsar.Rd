@@ -82,6 +82,7 @@ If \code{stars} is included as a criterion then additional arguments include
    \item ub.index: the lambda index of the upper bound at \eqn{N=2} samples if \code{ub.stars} flag is set to TRUE
    \item n.failed: the number of subsample fits at each lambda that \code{fun} reported as failed (see \code{\link{pulsar-function}})
    \item n.fit: the number of successful subsample fits at each lambda
+   \item summary.raw: the StARS statistic at each lambda before it is made monotone (see \code{\link{pulsar}})
 }
 
 reg: Registry object. See \code{batchtools::makeRegistry}
