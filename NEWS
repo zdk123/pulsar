@@ -1,3 +1,16 @@
+pulsar 0.4.0
+==============
+* Jobs can run as futures (#34): with `backend="future"`, `pulsar` runs the full-data fit and each subsample fit as a future, on whatever `future::plan()` sets (for example `plan(multisession)`, or Slurm through `future.batchtools`). Each future gets only its own rows of the data. `backend="local"` (the default) is unchanged, and `batch.pulsar` is kept
+* New `plan(pulsar::modal)` future backend runs the jobs on Modal, which needs a Modal account and the `modal` Python package. `install`, `install.local`, `apt`, `secrets`, `image` and `dockerfile` set up the worker image with CRAN, Bioconductor, GitHub and local packages. Sessions started at the same time retry when Modal's limit on creating apps refuses them, and `log.dir` keeps the helper process's log
+* New `job.seed` argument: each job runs `fun` on its own L'Ecuyer-CMRG random number stream, so a `fun` that draws random numbers gives the same result on every backend and number of workers. Your session's random number state is left as it was
+* New `run.dir` argument makes a run resumable: the job plan and each job's result are saved as they finish. Calling `pulsar` again with the same arguments loads the finished jobs and runs only the rest, on whatever backend is set now
+* Exact early stopping for StARS with the new `stop.full`, `stop.chunk` and `stop.margin` arguments. `stop.full` fits the subsamples only on the lambdas before the full-data fit's first failure. `stop.chunk` fits them down the path a chunk at a time, and stops once the summary has crossed `thresh`. The selected index, and the summary up to the cut, are the same as with the whole path when `fun` fits each lambda independently. The new `$stars$n.run` and `$stars$stop` say where and why a run stopped
+* New `full.chunk` argument splits the full-data fit into jobs on chunks of lambdas, which run in parallel and are joined into one result
+* New `getJobs()` gives a record of a run's jobs: timing, status, the machine each ran on, and failed fits. With `run.dir`, the record is also written to `jobs.csv` as each job finishes. Results now carry it as a `"jobs"` attribute, so remove that before comparing two runs with `all.equal`
+* With the `progressr` package, progress is reported on one bar per run, counted in lambdas fitted, with messages naming each group of jobs
+* New `$stars$summary.raw`: the StARS statistic at each lambda before it is made monotone (`summary` is its running maximum)
+
+
 pulsar 0.3.16
 ==============
 * batch.pulsar no longer fits one subsample twice when refit = TRUE and lb.stars = TRUE (#35). Results were unaffected
