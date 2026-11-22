@@ -95,11 +95,11 @@ plot.pulsar <- function(x, scale=TRUE, invlam=FALSE, loglam=FALSE, legends=TRUE,
     if (scale) {
         ylab <- "summary (scaled)"
         if ("stars" %in% crits)
-            ymax <- max(x$stars$summary)
+            ymax <- max(x$stars$summary, na.rm=TRUE)
         else ymax <- 1
     } else {
         ylab <- "summary"
-        ymax <- max(unlist(lapply(crits, function(c) x[[ c ]]$summary)))
+        ymax <- max(unlist(lapply(crits, function(c) x[[ c ]]$summary)), na.rm=TRUE)
     }
 
     yrange <- c(0, ymax)

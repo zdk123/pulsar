@@ -188,7 +188,7 @@ getMaxCov <- function(x, cov=isSymmetric(x), abs=TRUE, diag=FALSE) {
 .failwarn <- function(n.failed, n.total, opt.index, crit="StARS") {
     if (is.null(n.failed) || is.null(opt.index) || !isTRUE(opt.index >= 1)) return(invisible())
     near <- intersect(seq(opt.index - 1L, opt.index + 1L), seq_along(n.failed))
-    near <- near[n.failed[near] > 0]
+    near <- near[!is.na(n.failed[near]) & n.failed[near] > 0]
     if (length(near)) {
         n.total <- rep_len(n.total, length(n.failed))
         warning(sprintf(paste0("Subsample fits failed near the %s-selected lambda (index %d): %s. ",

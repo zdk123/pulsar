@@ -14,6 +14,9 @@
 ##   job_<id>.rds     list(lambda, value): one finished job; `lambda` is the
 ##                    path it was fitted on (bounded StARS narrows the path
 ##                    for stage 2, and a result is only reused for the same path)
+##   job_<id>_chunk_<k>.rds
+##                    the same, for one chunk of lambdas (early stopping with
+##                    stop.chunk)
 
 ## Fingerprint of a run's inputs. Functions are compared by their code (not
 ## their bytecode, which changes when R compiles them), and a closure's
@@ -67,9 +70,11 @@
     if (!identical(m$key, key))
       stop("run.dir '", run.dir, "' holds a different run (other data, fun, ",
            "fargs or settings); use a new run.dir", call.=FALSE)
-    ndone <- length(list.files(run.dir, "^job_.*\\.rds$"))
-    message(sprintf("Resuming the run in '%s': %d of %d job results saved",
-                    run.dir, ndone, length(m$jobs)))
+    ndone  <- length(list.files(run.dir, "^job_[0-9]+\\.rds$"))
+    nchunk <- length(list.files(run.dir, "^job_[0-9]+_chunk_[0-9]+\\.rds$"))
+    message(sprintf("Resuming the run in '%s': %d of %d job results saved%s",
+                    run.dir, ndone, length(m$jobs),
+                    if (nchunk) sprintf(", and %d chunk results", nchunk) else ""))
     return(m$jobs)
   }
   ## one run.dir is for one session at a time
@@ -80,7 +85,10 @@
 }
 
 #' @keywords internal
-.ckpath <- function(run.dir, spec) file.path(run.dir, sprintf("job_%06d.rds", spec$id))
+.ckpath <- function(run.dir, spec) {
+  file.path(run.dir, if (is.null(spec$chunk)) sprintf("job_%06d.rds", spec$id)
+                     else sprintf("job_%06d_chunk_%03d.rds", spec$id, spec$chunk))
+}
 
 ## write then rename, so a crash never leaves a partial file. A failed save
 ## stops the run: carrying on would lose results silently.
