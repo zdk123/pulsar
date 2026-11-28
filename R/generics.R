@@ -32,7 +32,7 @@ print.pulsar.refit <- function(x, ...) {
 #' @export
 print.pulsar <- function(x, ...) {
     fin <- getArgs(getCall(x), getEnvir(x))
-    mode <- ifelse(fin$ncores > 1, "parallel", "serial")
+    mode <- if (identical(fin$backend, "future")) "future" else if (fin$ncores > 1) "parallel" else "serial"
     cat("Mode:", mode)
     .print.pulsar(x, fin)
 }
