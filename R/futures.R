@@ -217,25 +217,14 @@ utils::globalVariables("X")
   collected <- logical(length(jobs))
   on.exit(for (i in which(!collected & !vapply(fs, is.null, logical(1))))
             try(future::cancel(fs[[i]]), silent=TRUE), add=TRUE)
-  for (i in seq_along(jobs)) {
-    spec <- jobs[[i]]
-    rows <- spec$rows
-    spec$rows <- seq_along(rows)
-    ## seed=NULL: no seed and no RNG check, as with backend="local"
-    fs[[i]] <- future::future(time_job(run_job, spec, X, fun, fargs),
-                   globals=list(time_job=time_job, run_job=run_job, spec=spec,
-                                X=data[rows, , drop=FALSE], fun=fun, fargs=fargs),
-                   packages="pulsar", seed=NULL, lazy=FALSE,
-                   label=sprintf("pulsar-%s", gsub(" ", "-", .joblabel(spec))))
-  }
-
   out  <- vector("list", length(fs))
   warn <- NULL
-  pending <- seq_along(fs)
-  while (length(pending)) {
+  pending <- integer(0)
+  ## collect the jobs that have finished: save and log each one at once
+  collect <- function() {
     done <- pending[vapply(fs[pending], future::resolved, logical(1))]
     for (i in done) {
-      out[[i]] <- withCallingHandlers(
+      out[[i]] <<- withCallingHandlers(
         tryCatch(future::value(fs[[i]]),
                  error=function(e) structure(conditionMessage(e), class="try-error")),
         warning=function(w) {
@@ -252,10 +241,37 @@ utils::globalVariables("X")
       if (!is.null(step))
         step(jobs[[i]], if (inherits(r, "try-error")) "failed" else "done")
     }
-    collected[done] <- TRUE
-    pending <- setdiff(pending, done)
-    if (length(pending) && !length(done)) Sys.sleep(0.05)
+    collected[done] <<- TRUE
+    pending <<- setdiff(pending, done)
+    length(done)
   }
+  ## a free worker for the next job? (if the backend can't say, submit, and
+  ## let future() wait for one)
+  free <- function() {
+    n <- tryCatch(future::nbrOfFreeWorkers(), error=function(e) Inf)
+    is.na(n) || n > 0
+  }
+
+  ## submit the jobs as workers free up, collecting finished ones meanwhile,
+  ## so a result is checkpointed when it finishes, not after every job has
+  ## been submitted (future() blocks while all workers are busy)
+  for (i in seq_along(jobs)) {
+    collect()
+    while (length(pending) && !free())
+      if (!collect()) Sys.sleep(0.05)
+    spec <- jobs[[i]]
+    rows <- spec$rows
+    spec$rows <- seq_along(rows)
+    ## seed=NULL: no seed and no RNG check, as with backend="local"
+    fs[[i]] <- future::future(time_job(run_job, spec, X, fun, fargs),
+                   globals=list(time_job=time_job, run_job=run_job, spec=spec,
+                                X=data[rows, , drop=FALSE], fun=fun, fargs=fargs),
+                   packages="pulsar", seed=NULL, lazy=FALSE,
+                   label=sprintf("pulsar-%s", gsub(" ", "-", .joblabel(spec))))
+    pending <- c(pending, i)
+  }
+  while (length(pending))
+    if (!collect()) Sys.sleep(0.05)
   list(out=out, warn=warn)
 }
 
