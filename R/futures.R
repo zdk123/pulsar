@@ -28,7 +28,7 @@ utils::globalVariables("X")
 #' @keywords internal
 .execjobs <- function(jobs, data, fun, fargs, backend="local", ncores=1,
                       pass.errors=TRUE, run.dir=NULL, tick=NULL, phase=NULL,
-                      full.chunk=NULL) {
+                      full.chunk=NULL, pool=NULL) {
   ## a full-data fit split into chunks of lambdas (full.chunk) runs as several
   ## jobs, joined back into one result before the results are checked
   nparts <- 0L
@@ -62,6 +62,12 @@ utils::globalVariables("X")
   if (any(todo)) {
     if (identical(backend, "future")) {
       res <- .futurejobs(jobs[todo], data, fun, fargs, run.dir, step)
+    } else if (ncores > 1L && !is.null(pool)) {
+      res <- pool$run(jobs[todo], fargs)
+      ## PSOCK results all come back at the end
+      if (!is.null(step))
+        for (k in seq_along(res$out))
+          step(jobs[todo][[k]], if (inherits(res$out[[k]], "try-error")) "failed" else "done")
     } else {
       efun <- .estfun(data, fun, run.dir)
       if (!is.null(step) && ncores <= 1) {
@@ -204,6 +210,51 @@ utils::globalVariables("X")
   }
 }
 
+#' @keywords internal
+.safefun <- function(efun) {
+  force(efun)
+  function(spec, fargs) {
+    tryCatch(efun(spec, fargs), error = function(e) {
+      structure(conditionMessage(e), class = "try-error")
+    })
+  }
+}
+
+## Lazy persistent PSOCK worker pool for backend="local" with ncores > 1.
+## Starts the cluster once on first use and exports data/fun/run.dir once to
+## each worker, avoiding per-round cluster spin-up and per-task re-serialization
+## across multi-round runs (lb.stars, stop.full, stop.chunk).
+#' @keywords internal
+.localpool <- function(data, fun, run.dir, ncores) {
+  cl <- NULL
+  installer <- function(f) {
+    assign(".__pulsar_efun__", f, envir = .GlobalEnv)
+    NULL
+  }
+  environment(installer) <- baseenv()
+  runner <- function(spec, fargs) {
+    get(".__pulsar_efun__", envir = .GlobalEnv)(spec, fargs)
+  }
+  environment(runner) <- baseenv()
+
+  list(
+    run = function(jobs_todo, fargs) {
+      if (is.null(cl)) {
+        cl <<- parallel::makePSOCKcluster(ncores)
+        parallel::clusterCall(cl, installer, .safefun(.estfun(data, fun, run.dir)))
+      }
+      out <- parallel::parLapplyLB(cl, jobs_todo, runner, fargs = fargs)
+      list(out = out, warn = NULL)
+    },
+    close = function() {
+      if (!is.null(cl)) {
+        try(parallel::stopCluster(cl), silent = TRUE)
+        cl <<- NULL
+      }
+    }
+  )
+}
+
 ## One future per job. Each future carries only its own rows of the data;
 ## results are collected as they finish and returned in job order. Errors,
 ## from `fun` or from the backend (a lost worker), become failed jobs, as on a
@@ -254,7 +305,7 @@ utils::globalVariables("X")
     }
     collected[done] <- TRUE
     pending <- setdiff(pending, done)
-    if (length(pending) && !length(done)) Sys.sleep(0.05)
+    if (length(pending) && !length(done)) Sys.sleep(0.01)
   }
   list(out=out, warn=warn)
 }

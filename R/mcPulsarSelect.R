@@ -253,10 +253,19 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
             progressr::progressor(steps=nlams * length(jobs)) else NULL
   tick <- .ticker(prog, nlams * length(jobs))
 
+  ## persistent PSOCK worker pool for backend="local" when ncores > 1
+  pool <- NULL
+  if (identical(backend, "local") && ncores > 1L) {
+    max_jobs <- max(length(jobs),
+                    if (!is.null(full.chunk)) ceiling(nlams / full.chunk) else 1L)
+    pool <- .localpool(data, fun, run.dir, min(as.integer(ncores), max_jobs))
+    on.exit(pool$close(), add=TRUE)
+  }
+
   if (early) {
     es <- .stoprun(jobs, data, fun, fargs, backend, ncores, run.dir, p, thresh,
                    fail.action, fail.thresh, stop.full, stop.chunk, stop.margin, tick,
-                   full.chunk)
+                   full.chunk, pool=pool)
     est <- list(stars=.stopstars(es, thresh, p, fail.action, fail.thresh))
     return(.pulsarout(est, es$fullmodel, criterion, match.call(), parent.frame(), es$jobs))
   }
@@ -266,7 +275,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
   ## don't pass on errors if lb.stars = TRUE
   premerge <- .execjobs(isamp, data, fun, fargs, backend, ncores,
                         pass.errors = !lb.stars, run.dir = run.dir, tick = tick,
-                        full.chunk = full.chunk,
+                        full.chunk = full.chunk, pool = pool,
                         phase = if (lb.stars) sprintf("stage 1 (bounds, %s)",
                                                       .lamrange(1, nlams, nlams)))
   joblog <- attr(premerge, 'jobs')
@@ -312,7 +321,7 @@ pulsar <- function(data, fun=huge::huge, fargs=list(),
          sprintf("bounds: %s, skipping %d fits", .lamrange(ub.index, lb.est$opt.index, nfull),
                  (nfull - nlams) * length(isamp)))
     tmp <- .execjobs(isamp, data, fun, fargs, backend, ncores, run.dir = run.dir,
-                     tick = tick, phase = sprintf("stage 2 (%s)",
+                     tick = tick, pool = pool, phase = sprintf("stage 2 (%s)",
                                        .lamrange(ub.index, lb.est$opt.index, nfull)))
     joblog <- rbind(joblog, attr(tmp, 'jobs'))
     # Adjust rep.num for failed jobs
