@@ -254,7 +254,7 @@ batch.pulsar <- function(data, fun=huge::huge, fargs=list(),
       .failwarn(est$stars$n.failed, est$stars$n.failed + est$stars$n.fit,
                 est$stars$opt.index)
       if (est$stars$opt.index == 1) {
-        direction <- if (any(est$stars$summary >= .1)) "larger" else "smaller"
+        direction <- if (any(est$stars$summary >= est$stars$thresh, na.rm=TRUE)) "larger" else "smaller"
         warning(paste("Optimal lambda may be", direction,
                       "than the supplied values"))
       }
