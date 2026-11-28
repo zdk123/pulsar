@@ -79,7 +79,8 @@ opt.index <- function(obj, criterion='gcd') {
     if (length(criterion) > 1) stop("Select one criterion")
     if (is.null(criterion)) criterion <- 'gcd'
     if (!is.null(value)) {
-      if (!is.numeric(value) || value < 1 || value >= length(fin$fargs$lambda))
+      if (!is.numeric(value) || length(value) != 1L || is.na(value) ||
+          value < 1 || value > length(fin$fargs$lambda))
         stop('Index value must be positive int within range length of lambda path')
     }
     obj[[ criterion ]]$opt.index <- value
